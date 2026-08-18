@@ -225,6 +225,7 @@
       <div class="stat"><span class="label">Wave</span><span class="value" id="wave">0</span></div>
     </div>
     <div id="wave-info" class="muted hidden" style="text-align:center;font-size:12px;">Enemies remaining: <b id="enemies-left">0</b></div>
+    <div id="next-wave" class="muted" style="text-align:center;font-size:12px;min-height:15px;"></div>
 
     <div class="section">
       <h2>Build</h2>
@@ -286,6 +287,7 @@
       Scouts outrun slow towers – frost or high fire-rate helps.
       Brutes soak up damage – set a tower to Strong targeting or box them in.
       Bosses arrive at the tail of waves 5, 10, 15… – concentrate fire or slow them.
+      The <b>Next</b> row shows the exact lineup of the coming wave – save gold accordingly.
     </div>
     <div class="hint">
       Enemies route from the green gate (left) to the amber gate (right) via
@@ -506,8 +508,7 @@ const state = {
   selected: null,  // the tower object the player has selected
   hover: null,     // { c, r } cell under the mouse, or null
   kills: 0,
-  totalGoldEarned: 0,
-  bossSpawned: false
+  totalGoldEarned: 0
 };
 let bestWave = parseInt(localStorage.getItem("td-best-wave") || "0", 10);
 
@@ -517,6 +518,8 @@ let projectiles = [];
 let explosions = [];     // short-lived visual rings from cannon blasts
 let route = [];          // current entry->exit route: array of { c, r }
 let routeKeys = new Set();
+let waveQueue = [];      // active wave: queue of enemy types still to spawn
+let nextWavePlan = [];   // pre-rolled lineup for the wave after the active one
 
 function makeTowerGrid() {
   towerGrid = [];
@@ -783,6 +786,10 @@ function spawnEnemy(forceType) {
   e.route = p || [];
   e.routeIndex = 1;
   enemies.push(e);
+  if (type === "boss") {
+    Sound.boss();
+    toast("BOSS incoming! Wave " + state.wave, true);
+  }
 }
 
 function updateEnemy(e, dt) {
@@ -1066,13 +1073,26 @@ function updateProjectiles(dt) {
 
 /* ============================== Waves ================================= */
 
+/* Pre-roll the exact lineup for wave w: one type per spawn, boss at the tail
+   of every 5th wave. Rolling up front (instead of per spawn) is what lets the
+   side panel show an honest preview of who is coming, so the player can save
+   gold for a boss or prep anti-scout frost before it arrives. */
+function planWave(w) {
+  const count = 6 + 3 * w;
+  const q = [];
+  for (let i = 0; i < count; i++) q.push(pickEnemyType(w));
+  if (w % 5 === 0) q.push("boss");
+  return q;
+}
+
 function startWave() {
   if (state.waveInProgress || state.gameOver) return;
   state.wave += 1;
   state.waveInProgress = true;
-  state.toSpawn = 6 + 3 * state.wave;
+  waveQueue = nextWavePlan;
+  nextWavePlan = planWave(state.wave + 1);
+  state.toSpawn = waveQueue.length;
   state.spawnTimer = 0;
-  state.bossSpawned = false;
   toast("Wave " + state.wave + " incoming");
   Sound.waveStart();
   syncHud();
@@ -1083,17 +1103,10 @@ function updateWave(dt) {
   if (state.toSpawn > 0) {
     state.spawnTimer -= dt;
     if (state.spawnTimer <= 0) {
-      spawnEnemy();
+      spawnEnemy(waveQueue.shift());
       state.toSpawn -= 1;
       state.spawnTimer = SPAWN_STAGGER;
     }
-  }
-  // A boss appears at the tail of every 5th wave.
-  if (state.toSpawn === 0 && !state.bossSpawned && state.wave % 5 === 0) {
-    spawnEnemy("boss");
-    state.bossSpawned = true;
-    Sound.boss();
-    toast("BOSS incoming! Wave " + state.wave, true);
   }
   if (state.toSpawn === 0 && enemies.length === 0) {
     state.waveInProgress = false;
@@ -1443,6 +1456,7 @@ const elLives = document.getElementById("lives");
 const elWave = document.getElementById("wave");
 const elWaveInfo = document.getElementById("wave-info");
 const elEnemiesLeft = document.getElementById("enemies-left");
+const elNextWave = document.getElementById("next-wave");
 const elToast = document.getElementById("toast");
 const elOverlay = document.getElementById("overlay");
 const elSelNone = document.getElementById("sel-none");
@@ -1462,6 +1476,19 @@ const towerBtns = Array.from(document.querySelectorAll(".tower-btn"));
 const modeBtns = Array.from(document.querySelectorAll(".mode-btn"));
 
 let toastTimer = 0;
+let lastNwHtml = "";
+
+/* Colored-dot breakdown of the coming wave's pre-rolled lineup. */
+function nextWavePreviewHtml() {
+  const counts = { normal: 0, scout: 0, brute: 0, boss: 0 };
+  for (const t of nextWavePlan) counts[t]++;
+  const parts = [];
+  if (counts.normal) parts.push('<span style="color:#ef476f;">●</span> ' + counts.normal);
+  if (counts.scout) parts.push('<span style="color:#f78fb3;">●</span> ' + counts.scout);
+  if (counts.brute) parts.push('<span style="color:#c9184a;">●</span> ' + counts.brute);
+  if (counts.boss) parts.push('<span style="color:#9d4edd;">●</span> <b>Boss</b>');
+  return parts.join("  ");
+}
 function toast(msg, bad) {
   elToast.textContent = msg;
   elToast.classList.toggle("bad", !!bad);
@@ -1480,6 +1507,11 @@ function syncHud() {
     elEnemiesLeft.textContent = String(enemies.length + state.toSpawn);
   } else {
     elWaveInfo.classList.add("hidden");
+  }
+  const nwHtml = state.gameOver ? "" : "Next " + (state.wave + 1) + ": " + nextWavePreviewHtml();
+  if (nwHtml !== lastNwHtml) {
+    lastNwHtml = nwHtml;
+    elNextWave.innerHTML = nwHtml;
   }
   btnWave.disabled = state.waveInProgress || state.gameOver;
   btnWave.textContent = state.waveInProgress ? "Wave in progress" : "Start Wave";
@@ -1648,7 +1680,8 @@ function resetGame() {
   state.selected = null;
   state.kills = 0;
   state.totalGoldEarned = 0;
-  state.bossSpawned = false;
+  waveQueue = [];
+  nextWavePlan = planWave(1);
   btnPause.textContent = "Pause";
   btnPause.classList.remove("fast");
   elPauseBadge.classList.add("hidden");
@@ -1686,6 +1719,7 @@ function frame(ts) {
 
 makeTowerGrid();
 recomputeRoute();
+nextWavePlan = planWave(1);
 syncHud();
 syncSoundBtn();
 requestAnimationFrame(frame);

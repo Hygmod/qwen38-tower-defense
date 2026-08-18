@@ -113,6 +113,18 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
   against the extracted module with a fake Web Audio API: 15 cases pass
   (node graph, resume-from-suspended, budget cap, noise-buffer caching,
   arpeggio, mute on/off/persistence, persisted-mute boot).
+- Added a next-wave lineup preview: each wave's exact composition is now
+  pre-rolled up front (planWave()) instead of drawn per spawn, so the side
+  panel shows a "Next N: ●counts" row (colored dots per enemy type, Boss
+  called out) for the coming wave before it starts — live during the current
+  wave too, so you can save gold for a 5th-wave boss or prep anti-scout frost.
+  startWave() promotes nextWavePlan to the active waveQueue and rolls the
+  following wave; updateWave() spawns from waveQueue.shift(); the boss is the
+  last queue element on 5th waves and its fanfare/toast moved into
+  spawnEnemy(); state.bossSpawned is gone. Verified in Node: planWave
+  invariants (length, boss-at-tail, type eligibility) across 30 waves x 50
+  rolls, and queue consumption over a full 60-wave run (no underflow, tail
+  boss on all 12 fifth-waves).
 
 ## Known issues
 
