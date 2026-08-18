@@ -27,6 +27,14 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
 - Verified the suspected economy bug from Known issues is not a bug:
   buildTower() runs canPlace() (sealing check, no mutation) before any gold
   deduction, so rejected placements never charge the player.
+- Fixed a wave soft-lock: an enemy sealed into a pocket by legal placements
+  (entry->exit still connects, so each build is allowed) ends up with an empty
+  route and sits forever, so the wave never clears and Start Wave stays
+  disabled. Boxed-in enemies now run a 5s grace timer (TRAP_GRACE) shown as a
+  draining amber countdown ring; if not shot down or freed by selling a tower
+  (re-path resets the clock) they dissolve for no gold and the wave can clear.
+  Kill-box play still works: towers in range shoot it, and repath on sell
+  frees it. Logic exercised in Node (trap, dissolve timing, escape, no gold).
 
 ## Known issues
 
@@ -40,5 +48,12 @@ well enough that the next developer can act on it without rediscovering it.
 - Nothing here has been verified in a running browser -- there is no browser in
   this environment and the static gate only checks that the code has the right
   SHAPE. Any behaviour may still be wrong, including things listed under Done.
-  (The pure logic -- pathfinding, placement validation, sealing rejection --
-  has been exercised in Node against the extracted functions.)
+  (The pure logic -- pathfinding, placement validation, sealing rejection,
+  trapped-enemy dissolve/escape -- has been exercised in Node against the
+  extracted functions.)
+- Projectile tunneling after a long frame: frame() clamps dt to 0.1s (0.2s at
+  2x speed), and a 430 px/s gun projectile then jumps up to ~86px in one step --
+  well past the combined hit radii (~12px), so it can step clean over a close
+  enemy after a tab-background. Rare (only the first frame after refocus).
+  Fix if it matters: sub-step projectile movement when dt is large, or a
+  swept-circle (segment vs circle) hit test in updateProjectiles().

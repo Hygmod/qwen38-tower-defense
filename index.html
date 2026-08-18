@@ -298,6 +298,7 @@ const TOWER_TYPES = {
 
 const MAX_LEVEL = 5;
 const SLOW_DURATION = 2.0; // seconds, refreshed on every frost hit
+const TRAP_GRACE = 5;      // seconds a boxed-in enemy lingers before it dissolves (no gold)
 const SLOW_FACTOR = 0.5;   // slow halves enemy speed
 const SELL_RATIO = 0.7;    // refund 70% of everything invested
 const START_GOLD = 200;
@@ -420,6 +421,7 @@ function repathEnemy(e) {
     if (p && p.length > 1) {
       e.route = p;
       e.routeIndex = 1; // p[0] is the cell the enemy already stands in
+      e.trappedTimer = 0; // pocket broken: the dissolve clock restarts
       return;
     }
   }
@@ -549,6 +551,7 @@ function spawnEnemy() {
     baseSpeed: Math.min(130, 55 + wave * 3),
     reward: 5 + wave,
     slowTimer: 0,
+    trappedTimer: 0,
     route: [],
     routeIndex: 0,
     dead: false,
@@ -564,7 +567,23 @@ function spawnEnemy() {
 function updateEnemy(e, dt) {
   if (e.dead || e.leaked) return;
   if (e.slowTimer > 0) e.slowTimer = Math.max(0, e.slowTimer - dt);
-  if (e.routeIndex >= e.route.length) return; // arrived at exit or boxed in
+  if (e.route.length === 0) {
+    // Boxed in: sealed into a pocket with no route to the exit (legal to
+    // build, since entry->exit still connects). Towers can still shoot it
+    // (the "kill box"), and selling a tower re-routes it and resets this
+    // clock. But if it sits unshot past the grace period it dissolves for
+    // no gold, so a trap without covering fire cannot soft-lock the wave.
+    e.trappedTimer += dt;
+    e.vx = 0;
+    e.vy = 0;
+    if (e.trappedTimer >= TRAP_GRACE) {
+      e.dead = true; // no gold
+      toast("Trapped enemy dissolved");
+    }
+    return;
+  }
+  e.trappedTimer = 0;
+  if (e.routeIndex >= e.route.length) return; // arrived at exit
 
   const speed = e.baseSpeed * (e.slowTimer > 0 ? SLOW_FACTOR : 1);
   let remaining = speed * dt;
@@ -1027,6 +1046,19 @@ function drawEnemy(e) {
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.arc(e.x, e.y, e.radius + 2.5, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+  // Trapped countdown: amber ring drains over TRAP_GRACE seconds before the
+  // enemy dissolves (no gold), so the player knows it can be freed or shot.
+  if (e.route.length === 0) {
+    const frac = Math.max(0, 1 - e.trappedTimer / TRAP_GRACE);
+    ctx.save();
+    ctx.strokeStyle = "#ffd166";
+    ctx.lineWidth = 2;
+    ctx.globalAlpha = 0.85;
+    ctx.beginPath();
+    ctx.arc(e.x, e.y, e.radius + 4.5, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * frac);
     ctx.stroke();
     ctx.restore();
   }
