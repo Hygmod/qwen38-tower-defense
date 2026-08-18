@@ -607,7 +607,13 @@ function updateEnemy(e, dt) {
 
 function enemyProgress(e) {
   // Higher = closer to the exit. Used to pick the "front" target.
-  if (e.routeIndex >= e.route.length) return Number.MAX_SAFE_INTEGER;
+  // A boxed-in enemy (trapped in a pocket sealed off from the exit) has an
+  // empty route: it will NEVER reach the exit, so it must rank lowest, not
+  // highest — otherwise every tower in range pours its DPS into a frozen
+  // target while real enemies march to the gate. 0 keeps it shootable when
+  // it is the only enemy in range (still clears the wave) but always below
+  // any enemy actually advancing (whose progress grows from ~0 upward).
+  if (e.routeIndex >= e.route.length) return 0;
   let prog = e.routeIndex;
   if (e.routeIndex > 0) {
     const wp = e.route[e.routeIndex];

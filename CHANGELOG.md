@@ -12,3 +12,6 @@ you do not repeat work that is already done.
 - Fixed live re-pathing soft-lock: enemies in transit that floor-mapped onto a
   just-blocked cell were permanently frozen (wave could never clear); they now
   re-path from the nearest adjacent cell that still reaches the exit.
+- Fixed targeting priority for boxed-in enemies: a frozen enemy trapped in a
+  sealed pocket ranked MAX progress, so all towers in range wasted DPS on it
+  while real enemies leaked; it now ranks lowest (still shootable alone).
