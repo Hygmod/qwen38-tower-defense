@@ -743,25 +743,53 @@ function updateTower(t, dt) {
   });
 }
 
+/* Nearest approach of point P to the segment A->B. Returns { t, d2 }: t is
+   the parameter (0..1) of the closest point on the segment and d2 the
+   squared distance from P to that point. Powers the swept projectile hit
+   test below. */
+function closestOnSegment(ax, ay, bx, by, px, py) {
+  const abx = bx - ax;
+  const aby = by - ay;
+  const len2 = abx * abx + aby * aby;
+  let t = len2 > 0 ? ((px - ax) * abx + (py - ay) * aby) / len2 : 0;
+  t = Math.max(0, Math.min(1, t));
+  const cx = ax + abx * t;
+  const cy = ay + aby * t;
+  const dx = px - cx;
+  const dy = py - cy;
+  return { t, d2: dx * dx + dy * dy };
+}
+
 function updateProjectiles(dt) {
   for (const p of projectiles) {
-    p.x += p.vx * dt;
-    p.y += p.vy * dt;
+    const nx = p.x + p.vx * dt;
+    const ny = p.y + p.vy * dt;
     p.life -= dt;
-    if (p.life <= 0 || p.x < -20 || p.x > W + 20 || p.y < -20 || p.y > H + 20) {
+    // Swept hit test over the whole segment this frame travelled. The old
+    // point test only sampled the endpoint, so a long dt (the first frame
+    // after a backgrounded tab, up to ~0.2s here) let a 430px/s shot jump
+    // ~86px and step clean over a close enemy. Checking the segment makes
+    // the hit exact for any dt; we keep the earliest contact along the path.
+    let hitE = null;
+    let hitT = Infinity;
+    for (const e of enemies) {
+      if (e.dead || e.leaked) continue;
+      const rr = e.radius + p.radius;
+      const h = closestOnSegment(p.x, p.y, nx, ny, e.x, e.y);
+      if (h.d2 <= rr * rr && h.t < hitT) {
+        hitT = h.t;
+        hitE = e;
+      }
+    }
+    if (hitE) {
+      damageEnemy(hitE, p.damage, p.slows);
       p.dead = true;
       continue;
     }
-    for (const e of enemies) {
-      if (e.dead || e.leaked) continue;
-      const dx = e.x - p.x;
-      const dy = e.y - p.y;
-      const rr = e.radius + p.radius;
-      if (dx * dx + dy * dy <= rr * rr) {
-        damageEnemy(e, p.damage, p.slows);
-        p.dead = true;
-        break;
-      }
+    p.x = nx;
+    p.y = ny;
+    if (p.life <= 0 || p.x < -20 || p.x > W + 20 || p.y < -20 || p.y > H + 20) {
+      p.dead = true;
     }
   }
   projectiles = projectiles.filter((p) => !p.dead);

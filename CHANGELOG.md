@@ -35,6 +35,14 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
   (re-path resets the clock) they dissolve for no gold and the wave can clear.
   Kill-box play still works: towers in range shoot it, and repath on sell
   frees it. Logic exercised in Node (trap, dissolve timing, escape, no gold).
+- Fixed projectile tunneling after a long frame: updateProjectiles() now runs a
+  swept segment-vs-circle hit test (new closestOnSegment() helper) over the
+  whole segment a shot travels this frame instead of sampling only the endpoint,
+  so the first frame after a tab refocus (~0.2s, ~86px for a gun shot) can no
+  longer step clean over a close enemy. Keeps the earliest contact along the
+  path so a shot crossing two enemies hits the nearer one. Verified in Node:
+  tunnel hit, no off-path false positive, earliest-of-two, short-step
+  regression, frost slow, start-overlap, out-of-bounds.
 
 ## Known issues
 
@@ -49,11 +57,5 @@ well enough that the next developer can act on it without rediscovering it.
   this environment and the static gate only checks that the code has the right
   SHAPE. Any behaviour may still be wrong, including things listed under Done.
   (The pure logic -- pathfinding, placement validation, sealing rejection,
-  trapped-enemy dissolve/escape -- has been exercised in Node against the
-  extracted functions.)
-- Projectile tunneling after a long frame: frame() clamps dt to 0.1s (0.2s at
-  2x speed), and a 430 px/s gun projectile then jumps up to ~86px in one step --
-  well past the combined hit radii (~12px), so it can step clean over a close
-  enemy after a tab-background. Rare (only the first frame after refocus).
-  Fix if it matters: sub-step projectile movement when dt is large, or a
-  swept-circle (segment vs circle) hit test in updateProjectiles().
+  trapped-enemy dissolve/escape, swept projectile hits -- has been exercised in
+  Node against the extracted functions.)
