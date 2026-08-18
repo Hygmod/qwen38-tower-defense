@@ -131,6 +131,17 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
   canvas render pass (with a 1px shadow for readability) handle the effect;
   capped at 36 active floats so cannon splash never floods. Verified in Node:
   spawn/decay timing and cap bound.
+- Added per-tower performance stats to the Selected Tower panel: each tower
+  now tracks `dealt` (total damage) and `kills` (finishers), tallied in
+  damageEnemy() via a new `src` parameter that projectiles carry from their
+  firing tower (cannon splash attributes every splash hit to the cannon, so
+  area towers credit correctly). The panel shows Dealt / Kills / Value, where
+  Value = damage per gold invested (with a tooltip explaining it) -- this
+  gives the player the feedback needed to decide which tower to upgrade next
+  and which to sell, which was previously a blind guess. Verified in Node
+  against the extracted functions: 12 cases pass (partial-hit tally, kill
+  attribution, gold reward, no-src safety, dead-enemy no-recount, splash
+  multi-victim credit with falloff bounds).
 
 ## Known issues
 

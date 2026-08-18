@@ -682,6 +682,8 @@ function buildTower(c, r) {
     mode: "first", // targeting mode: first | last | strong | close
     level: 1,
     invested: type.cost,
+    dealt: 0,   // total damage this tower has dealt (shown in the panel)
+    kills: 0,   // enemies this tower has finished off
     damage: type.damage,
     range: type.range,
     fireCooldown: type.fireCooldown,
@@ -877,12 +879,14 @@ function enemyProgress(e) {
   return prog;
 }
 
-function damageEnemy(e, dmg, slows) {
+function damageEnemy(e, dmg, slows, src) {
   if (e.dead) return;
   e.hp -= dmg;
+  if (src) src.dealt += dmg; // per-tower damage tally (drives the panel stats)
   if (slows) e.slowTimer = SLOW_DURATION; // refreshed, never stacked
   if (e.hp <= 0) {
     e.dead = true;
+    if (src) src.kills += 1; // last hit is attributed to the firing tower
     Sound.kill();
     state.gold += e.reward;
     state.kills += 1;
@@ -1014,6 +1018,7 @@ function updateTower(t, dt) {
     color: TOWER_TYPES[t.type].color,
     slows: !!TOWER_TYPES[t.type].slows,
     splash: TOWER_TYPES[t.type].splash || 0,
+    src: t,     // owning tower: damage dealt / kills are attributed to it
     life: 1.6
   });
   Sound.shoot(t.type);
@@ -1069,13 +1074,13 @@ function updateProjectiles(dt) {
           const d = Math.hypot(en.x - ix, en.y - iy);
           if (d <= R) {
             const falloff = 0.5 + 0.5 * (1 - d / R); // 1.0 center -> 0.5 edge
-            damageEnemy(en, Math.max(1, Math.round(p.damage * falloff)), p.slows);
+            damageEnemy(en, Math.max(1, Math.round(p.damage * falloff)), p.slows, p.src);
           }
         }
         explosions.push({ x: ix, y: iy, r: 4, maxR: R, life: 0.35 });
         Sound.boom();
       } else {
-        damageEnemy(hitE, p.damage, p.slows);
+        damageEnemy(hitE, p.damage, p.slows, p.src);
       }
       p.dead = true;
       continue;
@@ -1569,7 +1574,10 @@ function syncHud() {
   elSelStats.innerHTML =
     "Damage <b>" + t.damage + "</b> &nbsp; Range <b>" + t.range.toFixed(1) + "</b><br>" +
     "Rate <b>" + (1 / t.fireCooldown).toFixed(1) + "/s</b> &nbsp; " +
-    (type.slows ? "Chills enemies" : "Single-target");
+    (type.slows ? "Chills enemies" : "Single-target") + "<br>" +
+    "Dealt <b>" + Math.round(t.dealt) + "</b> &nbsp; Kills <b>" + (t.kills || 0) +
+    " &nbsp; Value <b>" + (t.invested > 0 ? ((t.dealt || 0) / t.invested).toFixed(1) : "0.0") + "x</b>";
+  elSelStats.title = "Damage dealt and kills since this tower was built. Value = damage per gold invested — upgrade the towers that earn it back fastest, sell the ones that don't.";
   if (t.level >= MAX_LEVEL) {
     elSelCosts.textContent = "Max level reached.";
     btnUpgrade.disabled = true;
