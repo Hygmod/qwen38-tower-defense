@@ -15,3 +15,4 @@ you do not repeat work that is already done.
 - Fixed targeting priority for boxed-in enemies: a frozen enemy trapped in a
   sealed pocket ranked MAX progress, so all towers in range wasted DPS on it
   while real enemies leaked; it now ranks lowest (still shootable alone).
+- Added a live "Enemies remaining" counter in the side panel showing alive + yet-to-spawn enemies during an active wave.

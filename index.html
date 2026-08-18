@@ -194,6 +194,7 @@
       <div class="stat"><span class="label">Lives</span><span class="value" id="lives">20</span></div>
       <div class="stat"><span class="label">Wave</span><span class="value" id="wave">0</span></div>
     </div>
+    <div id="wave-info" class="muted hidden" style="text-align:center;font-size:12px;">Enemies remaining: <b id="enemies-left">0</b></div>
 
     <div class="section">
       <h2>Build</h2>
@@ -1026,6 +1027,8 @@ function drawEnemy(e) {
 const elGold = document.getElementById("gold");
 const elLives = document.getElementById("lives");
 const elWave = document.getElementById("wave");
+const elWaveInfo = document.getElementById("wave-info");
+const elEnemiesLeft = document.getElementById("enemies-left");
 const elToast = document.getElementById("toast");
 const elOverlay = document.getElementById("overlay");
 const elSelNone = document.getElementById("sel-none");
@@ -1053,6 +1056,13 @@ function syncHud() {
   elGold.textContent = String(state.gold);
   elLives.textContent = String(state.lives);
   elWave.textContent = String(state.wave) + (state.waveInProgress ? " ▸" : "");
+
+  if (state.waveInProgress) {
+    elWaveInfo.classList.remove("hidden");
+    elEnemiesLeft.textContent = String(enemies.length + state.toSpawn);
+  } else {
+    elWaveInfo.classList.add("hidden");
+  }
   btnWave.disabled = state.waveInProgress || state.gameOver;
   btnWave.textContent = state.waveInProgress ? "Wave in progress" : "Start Wave";
 
