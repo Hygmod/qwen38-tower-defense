@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Grid Tower Defense</title>
+<style>
+  :root {
+    --bg: #0e0e14;
+    --panel: #15151d;
+    --panel-2: #1c1c26;
+    --line: #262633;
+    --text: #e9e9f2;
+    --muted: #8b8b9d;
+    --ground: #1b1b22;
+    --path: #3d3428;
+    --cyan: #4cc9f0;
+    --ice: #b8c0ff;
+    --pink: #ef476f;
+    --mint: #06d6a0;
+    --amber: #ffd166;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: radial-gradient(1100px 700px at 50% 15%, #15151f 0%, var(--bg) 65%);
+    color: var(--text);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh;
+  }
+  .app { display: flex; gap: 22px; padding: 28px; align-items: stretch; }
+  .stage { position: relative; line-height: 0; }
+  canvas {
+    display: block;
+    width: 640px; height: 480px;
+    background: var(--ground);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55), 0 2px 0 rgba(255, 255, 255, 0.03) inset;
+  }
+  .toast {
+    position: absolute; top: 14px; left: 50%;
+    transform: translateX(-50%) translateY(-6px);
+    background: rgba(14, 14, 20, 0.92);
+    border: 1px solid var(--line);
+    color: var(--text);
+    padding: 8px 16px; border-radius: 999px;
+    font-size: 13px; font-weight: 600; letter-spacing: 0.2px;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.18s ease, transform 0.18s ease;
+    white-space: nowrap; line-height: 1.4;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.bad { border-color: rgba(239, 71, 111, 0.55); color: #ff9eb5; }
+  .overlay {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+    background: rgba(10, 10, 15, 0.78);
+    backdrop-filter: blur(3px);
+    border-radius: 12px;
+    line-height: 1.4;
+  }
+  .overlay.hidden { display: none; }
+  .overlay h2 { font-size: 30px; letter-spacing: 1px; }
+  .overlay p { color: var(--muted); font-size: 14px; }
+  .panel {
+    width: 262px;
+    background: linear-gradient(180deg, var(--panel) 0%, #12121a 100%);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 18px 16px;
+    display: flex; flex-direction: column; gap: 14px;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
+  }
+  .panel h1 { font-size: 17px; letter-spacing: 2.5px; text-transform: uppercase; }
+  .panel h1 span { color: var(--mint); }
+  .stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .stat {
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 9px 6px 8px;
+    text-align: center;
+  }
+  .stat .label {
+    display: block; font-size: 10px; letter-spacing: 1.6px;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 3px;
+  }
+  .stat .value { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  #gold { color: var(--amber); }
+  #lives { color: var(--pink); }
+  #wave { color: var(--mint); }
+  .section {
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .section h2 {
+    font-size: 10px; letter-spacing: 1.8px; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 2px;
+  }
+  .tower-btn {
+    display: flex; align-items: center; gap: 10px;
+    background: #20202c;
+    color: var(--text);
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    padding: 9px 10px;
+    cursor: pointer;
+    font: inherit; font-size: 13px;
+    transition: border-color 0.12s ease, background 0.12s ease, transform 0.05s ease;
+    text-align: left;
+  }
+  .tower-btn:hover { background: #242433; }
+  .tower-btn:active { transform: translateY(1px); }
+  .tower-btn.selected { border-color: var(--mint); box-shadow: 0 0 0 1px var(--mint) inset; }
+  .swatch { width: 16px; height: 16px; border-radius: 5px; flex: none; }
+  .swatch.gun { background: var(--cyan); box-shadow: 0 0 10px rgba(76, 201, 240, 0.7); }
+  .swatch.frost { background: var(--ice); box-shadow: 0 0 10px rgba(184, 192, 255, 0.7); }
+  .tb-name { font-weight: 700; flex: 1; }
+  .tb-cost { color: var(--amber); font-size: 12px; font-weight: 600; }
+  button.primary {
+    background: linear-gradient(180deg, #0aa37c 0%, var(--mint) 100%);
+    color: #04241b;
+    border: none; border-radius: 9px;
+    padding: 11px 12px;
+    font: inherit; font-size: 14px; font-weight: 800; letter-spacing: 0.4px;
+    cursor: pointer;
+    transition: filter 0.12s ease, transform 0.05s ease;
+  }
+  button.primary:hover { filter: brightness(1.08); }
+  button.primary:active { transform: translateY(1px); }
+  button.primary:disabled { filter: grayscale(0.7) brightness(0.6); cursor: default; }
+  button.ghost {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    padding: 9px 12px;
+    font: inherit; font-size: 13px; font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.12s ease, background 0.12s ease;
+  }
+  button.ghost:hover { background: #20202c; border-color: #34344a; }
+  button.ghost.fast { border-color: var(--amber); color: var(--amber); }
+  .row { display: flex; gap: 8px; }
+  .row button { flex: 1; }
+  button.action {
+    background: #23232f;
+    color: var(--text);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font: inherit; font-size: 12.5px; font-weight: 700;
+    cursor: pointer;
+    transition: filter 0.12s ease, border-color 0.12s ease;
+  }
+  button.action:hover { filter: brightness(1.15); }
+  button.action:disabled { opacity: 0.4; cursor: default; }
+  #btn-upgrade { border-color: rgba(76, 201, 240, 0.4); }
+  #btn-sell { border-color: rgba(255, 209, 102, 0.4); }
+  .muted { color: var(--muted); font-size: 12px; }
+  #sel-title { font-weight: 800; font-size: 14px; }
+  #sel-stats { font-size: 12px; line-height: 1.6; }
+  #sel-stats b { color: var(--text); }
+  .hidden { display: none !important; }
+  .hint { font-size: 11px; color: var(--muted); line-height: 1.5; }
+  kbd {
+    background: #23232f; border: 1px solid var(--line); border-bottom-width: 2px;
+    border-radius: 4px; padding: 0 5px; font-size: 10px; font-family: inherit;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="stage">
+    <canvas id="game" width="640" height="480"></canvas>
+    <div id="toast" class="toast"></div>
+    <div id="overlay" class="overlay hidden">
+      <h2 id="overlay-title">Game Over</h2>
+      <p id="overlay-sub">The horde broke through.</p>
+      <button id="btn-restart" class="primary">Play Again</button>
+    </div>
+  </div>
+
+  <aside class="panel">
+    <h1>Grid <span>Tower Defense</span></h1>
+
+    <div class="stats">
+      <div class="stat"><span class="label">Gold</span><span class="value" id="gold">200</span></div>
+      <div class="stat"><span class="label">Lives</span><span class="value" id="lives">20</span></div>
+      <div class="stat"><span class="label">Wave</span><span class="value" id="wave">0</span></div>
+    </div>
+
+    <div class="section">
+      <h2>Build</h2>
+      <button class="tower-btn selected" id="btn-gun" data-type="gun">
+        <span class="swatch gun"></span>
+        <span class="tb-name">Gun Tower</span>
+        <span class="tb-cost">50g</span>
+      </button>
+      <button class="tower-btn" id="btn-frost" data-type="frost">
+        <span class="swatch frost"></span>
+        <span class="tb-name">Frost Tower</span>
+        <span class="tb-cost">75g</span>
+      </button>
+      <div class="hint">Gun: fast, single-target. Frost: chills for 2s (half speed). Click a cell to build, click a tower to inspect it.</div>
+    </div>
+
+    <div class="section">
+      <h2>Selected Tower</h2>
+      <div id="sel-none" class="muted">Nothing selected.</div>
+      <div id="sel-box" class="hidden" style="display:flex;flex-direction:column;gap:8px;">
+        <div id="sel-title">Gun Tower</div>
+        <div id="sel-stats" class="muted"></div>
+        <div class="row">
+          <button class="action" id="btn-upgrade">Upgrade</button>
+          <button class="action" id="btn-sell">Sell</button>
+        </div>
+        <div id="sel-costs" class="muted"></div>
+      </div>
+    </div>
+
+    <div class="section" style="gap:8px;">
+      <button class="primary" id="btn-wave">Start Wave</button>
+      <button class="ghost" id="btn-speed">Speed: 1x</button>
+    </div>
+
+    <div class="hint">
+      Enemies route from the green gate (left) to the amber gate (right) via
+      live pathfinding around your towers. A placement that would seal the
+      maze is rejected. Keys: <kbd>1</kbd> gun, <kbd>2</kbd> frost,
+      <kbd>U</kbd> upgrade, <kbd>S</kbd> sell, <kbd>Space</kbd> start wave.
+    </div>
+  </aside>
+</div>
+
+<script>
+(() => {
+"use strict";
+
+/* ============================== Geometry ============================== */
+
+const COLS = 20;
+const ROWS = 15;
+const CELL = 32;
+const W = COLS * CELL;
+const H = ROWS * CELL;
+
+const ENTRY = { c: 0, r: 7 };
+const EXIT  = { c: COLS - 1, r: 7 };
+
+// The single pair of grid<->pixel converters used everywhere in the game.
+function cellToPixel(c, r) {
+  return { x: c * CELL, y: r * CELL };
+}
+function pixelToCell(x, y) {
+  return {
+    c: Math.max(0, Math.min(COLS - 1, Math.floor(x / CELL))),
+    r: Math.max(0, Math.min(ROWS - 1, Math.floor(y / CELL)))
+  };
+}
+function cellCenter(c, r) {
+  const p = cellToPixel(c, r);
+  return { x: p.x + CELL / 2, y: p.y + CELL / 2 };
+}
+function cellKey(c, r) {
+  return r * COLS + c;
+}
+
+/* ============================== Config ================================ */
+
+const TOWER_TYPES = {
+  gun: {
+    name: "Gun Tower",
+    color: "#4cc9f0",
+    cost: 50,
+    range: 3.4,          // in cells
+    damage: 12,
+    fireCooldown: 0.42,  // seconds between shots
+    projectileSpeed: 430 // px per second
+  },
+  frost: {
+    name: "Frost Tower",
+    color: "#b8c0ff",
+    cost: 75,
+    range: 3.0,
+    damage: 5,
+    fireCooldown: 0.85,
+    projectileSpeed: 340,
+    slows: true
+  }
+};
+
+const MAX_LEVEL = 5;
+const SLOW_DURATION = 2.0; // seconds, refreshed on every frost hit
+const SLOW_FACTOR = 0.5;   // slow halves enemy speed
+const SELL_RATIO = 0.7;    // refund 70% of everything invested
+const START_GOLD = 200;
+const START_LIVES = 20;
+const SPAWN_STAGGER = 0.75; // seconds between enemy spawns in a wave
+
+/* ============================== State ================================= */
+
+const state = {
+  gold: START_GOLD,
+  lives: START_LIVES,
+  wave: 0,
+  waveInProgress: false,
+  toSpawn: 0,
+  spawnTimer: 0,
+  gameOver: false,
+  speed: 1,        // 1 or 2; applied as a multiplier on delta time
+  buildType: "gun",
+  selected: null,  // the tower object the player has selected
+  hover: null      // { c, r } cell under the mouse, or null
+};
+
+let towerGrid = [];      // [r][c] -> tower object or null
+let enemies = [];
+let projectiles = [];
+let route = [];          // current entry->exit route: array of { c, r }
+let routeKeys = new Set();
+
+function makeTowerGrid() {
+  towerGrid = [];
+  for (let r = 0; r < ROWS; r++) towerGrid.push(new Array(COLS).fill(null));
+}
+
+/* ============================== Pathfinding =========================== */
+/* Breadth-first search over walkable cells. Walkable = in bounds and not
+   occupied by a tower. The grid is passed in explicitly so the same search
+   can run against the live maze or against a candidate maze during
+   placement validation. Returns the full path (start..goal inclusive) or
+   null when the goal is unreachable. */
+
+const NEIGHBORS = [
+  { c: 0,  r: -1 },
+  { c: 0,  r: 1 },
+  { c: -1, r: 0 },
+  { c: 1,  r: 0 }
+];
+
+function isWalkable(grid, r, c) {
+  if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return false;
+  return grid[r][c] === null;
+}
+
+function findPath(grid, from, to) {
+  const startKey = cellKey(from.c, from.r);
+  const goalKey = cellKey(to.c, to.r);
+  if (!isWalkable(grid, from.r, from.c) || !isWalkable(grid, to.r, to.c)) return null;
+
+  const visited = new Set([startKey]);
+  const prev = new Map();
+  const queue = [{ c: from.c, r: from.r }];
+
+  while (queue.length > 0) {
+    const cur = queue.shift();
+    if (cellKey(cur.c, cur.r) === goalKey) {
+      // Reconstruct the path from goal back to start.
+      const path = [];
+      let k = goalKey;
+      while (k !== undefined) {
+        path.push({ c: k % COLS, r: Math.floor(k / COLS) });
+        k = prev.get(k);
+      }
+      path.reverse();
+      return path;
+    }
+    for (const n of NEIGHBORS) {
+      const nc = cur.c + n.c;
+      const nr = cur.r + n.r;
+      const nk = cellKey(nc, nr);
+      if (!visited.has(nk) && isWalkable(grid, nr, nc)) {
+        visited.add(nk);
+        prev.set(nk, cellKey(cur.c, cur.r));
+        queue.push({ c: nc, r: nr });
+      }
+    }
+  }
+  return null;
+}
+
+/* The live route the whole field currently uses. */
+function recomputeRoute() {
+  route = findPath(towerGrid, ENTRY, EXIT) || [];
+  routeKeys = new Set(route.map((p) => cellKey(p.c, p.r)));
+}
+
+/* Re-route every enemy from wherever it stands right now. Called whenever
+   the maze changes (tower placed or sold) so nobody keeps following a
+   stale route through a freshly occupied cell. */
+function repathAllEnemies() {
+  for (const e of enemies) {
+    const here = pixelToCell(e.x, e.y);
+    const p = findPath(towerGrid, { c: here.c, r: here.r }, EXIT);
+    if (p && p.length > 1) {
+      e.route = p;
+      e.routeIndex = 1; // p[0] is the cell the enemy already stands in
+    } else {
+      e.route = [];     // boxed in: it stops dead and sits there
+      e.routeIndex = 0;
+      e.vx = 0;
+      e.vy = 0;
+    }
+  }
+}
+
+/* ============================== Placement ============================= */
+
+function enemyInCell(c, r) {
+  for (const e of enemies) {
+    if (e.dead) continue;
+    const p = pixelToCell(e.x, e.y);
+    if (p.c === c && p.r === r) return true;
+  }
+  return false;
+}
+
+/* Validate a build before committing it. Returns { ok, reason }.
+   The candidate grid is a full copy of the live grid with the proposed
+   tower in it; the real grid is only touched by buildTower(), which is
+   only called when this returns ok. */
+function canPlace(c, r) {
+  if (c < 0 || c >= COLS || r < 0 || r >= ROWS) return { ok: false, reason: "Out of bounds" };
+  if (c === ENTRY.c && r === ENTRY.r) return { ok: false, reason: "Cannot build on the entry gate" };
+  if (c === EXIT.c && r === EXIT.r) return { ok: false, reason: "Cannot build on the exit gate" };
+  if (towerGrid[r][c]) return { ok: false, reason: "That cell is occupied" };
+  if (enemyInCell(c, r)) return { ok: false, reason: "An enemy is standing there" };
+
+  const candidate = towerGrid.map((row) => row.slice());
+  candidate[r][c] = { candidate: true };
+  const p = findPath(candidate, ENTRY, EXIT);
+  if (!p) return { ok: false, reason: "That would seal the path" };
+  return { ok: true };
+}
+
+function buildTower(c, r) {
+  const check = canPlace(c, r);
+  if (!check.ok) {
+    toast(check.reason, true);
+    return;
+  }
+  const type = TOWER_TYPES[state.buildType];
+  if (state.gold < type.cost) {
+    toast("Not enough gold", true);
+    return;
+  }
+  state.gold -= type.cost;
+  const t = {
+    c, r,
+    type: state.buildType,
+    level: 1,
+    invested: type.cost,
+    damage: type.damage,
+    range: type.range,
+    fireCooldown: type.fireCooldown,
+    cooldown: 0,
+    angle: 0,
+    pulse: 0
+  };
+  towerGrid[r][c] = t;
+  const center = cellCenter(c, r);
+  t.x = center.x;
+  t.y = center.y;
+  // Maze changed: refresh the shared route and re-path every walker.
+  recomputeRoute();
+  repathAllEnemies();
+  syncHud();
+}
+
+function sellTower(t) {
+  if (!t) return;
+  const refund = Math.round(t.invested * SELL_RATIO);
+  state.gold += refund;
+  towerGrid[t.r][t.c] = null;
+  if (state.selected === t) state.selected = null;
+  recomputeRoute();
+  repathAllEnemies();
+  toast("Sold for " + refund + " gold");
+  syncHud();
+}
+
+function upgradeCost(t) {
+  return Math.round(TOWER_TYPES[t.type].cost * 0.7 * t.level);
+}
+
+function upgradeTower(t) {
+  if (!t || t.level >= MAX_LEVEL) return;
+  const cost = upgradeCost(t);
+  if (state.gold < cost) {
+    toast("Not enough gold", true);
+    return;
+  }
+  state.gold -= cost;
+  t.invested += cost;
+  t.level += 1;
+  t.damage = Math.round(t.damage * 1.35 + 1);
+  t.range = t.range + 0.35;
+  t.pulse = 0.35;
+  syncHud();
+}
+
+/* ============================== Enemies =============================== */
+
+function spawnEnemy() {
+  const wave = state.wave;
+  const start = cellCenter(ENTRY.c, ENTRY.r);
+  const e = {
+    x: start.x,
+    y: start.y,
+    vx: 0,
+    vy: 0,
+    radius: 9,
+    hp: Math.round(26 * Math.pow(1.22, wave - 1)),
+    maxHp: 0,
+    baseSpeed: Math.min(130, 55 + wave * 3),
+    reward: 5 + wave,
+    slowTimer: 0,
+    route: [],
+    routeIndex: 0,
+    dead: false,
+    leaked: false
+  };
+  e.maxHp = e.hp;
+  const p = findPath(towerGrid, ENTRY, EXIT);
+  e.route = p || [];
+  e.routeIndex = 1;
+  enemies.push(e);
+}
+
+function updateEnemy(e, dt) {
+  if (e.dead || e.leaked) return;
+  if (e.slowTimer > 0) e.slowTimer = Math.max(0, e.slowTimer - dt);
+  if (e.routeIndex >= e.route.length) return; // arrived at exit or boxed in
+
+  const speed = e.baseSpeed * (e.slowTimer > 0 ? SLOW_FACTOR : 1);
+  let remaining = speed * dt;
+
+  while (remaining > 0 && e.routeIndex < e.route.length) {
+    const wp = e.route[e.routeIndex];
+    const p = cellCenter(wp.c, wp.r);
+    const dx = p.x - e.x;
+    const dy = p.y - e.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist < 0.0001) {
+      e.routeIndex += 1;
+      continue;
+    }
+    if (dist <= remaining) {
+      e.x = p.x;
+      e.y = p.y;
+      e.vx = (dx / dist) * speed;
+      e.vy = (dy / dist) * speed;
+      e.routeIndex += 1;
+      remaining -= dist;
+    } else {
+      e.x += (dx / dist) * remaining;
+      e.y += (dy / dist) * remaining;
+      e.vx = (dx / dist) * speed;
+      e.vy = (dy / dist) * speed;
+      remaining = 0;
+    }
+  }
+
+  if (e.routeIndex >= e.route.length && e.route.length > 0) {
+    // The route always ends at the exit, so walking it out means a leak.
+    e.leaked = true;
+    state.lives -= 1;
+    if (state.lives <= 0) {
+      state.lives = 0;
+      state.gameOver = true;
+      showGameOver();
+    }
+  }
+}
+
+function enemyProgress(e) {
+  // Higher = closer to the exit. Used to pick the "front" target.
+  if (e.routeIndex >= e.route.length) return Number.MAX_SAFE_INTEGER;
+  let prog = e.routeIndex;
+  if (e.routeIndex > 0) {
+    const wp = e.route[e.routeIndex];
+    const p = cellCenter(wp.c, wp.r);
+    prog -= Math.hypot(p.x - e.x, p.y - e.y) / CELL;
+  }
+  return prog;
+}
+
+function damageEnemy(e, dmg, slows) {
+  if (e.dead) return;
+  e.hp -= dmg;
+  if (slows) e.slowTimer = SLOW_DURATION; // refreshed, never stacked
+  if (e.hp <= 0) {
+    e.dead = true;
+    state.gold += e.reward;
+  }
+}
+
+/* ============================== Towers ================================ */
+
+/* Predictive aiming: solve for where the target WILL be when the shot
+   arrives. With target position T, velocity (vx, vy) and projectile speed
+   S, we want |T + v*t - P| = S*t, a quadratic in t. Aiming at the enemy's
+   current position would make every shot trail moving targets. */
+function predictIntercept(target, speed, sx, sy) {
+  const dx = target.x - sx;
+  const dy = target.y - sy;
+  const vx = target.vx;
+  const vy = target.vy;
+  const a = vx * vx + vy * vy - speed * speed;
+  const b = 2 * (dx * vx + dy * vy);
+  const c = dx * dx + dy * dy;
+
+  let t = Infinity;
+  if (Math.abs(a) < 1e-9) {
+    // Target is (nearly) stationary relative to the shot.
+    t = c / speed;
+  } else {
+    const disc = b * b - 4 * a * c;
+    if (disc >= 0) {
+      const sq = Math.sqrt(disc);
+      const t1 = (-b - sq) / (2 * a);
+      const t2 = (-b + sq) / (2 * a);
+      if (t1 > 1e-6) t = Math.min(t, t1);
+      if (t2 > 1e-6) t = Math.min(t, t2);
+    }
+  }
+  if (!isFinite(t) || t <= 0) {
+    // No forward intercept (e.g. target fleeing exactly at shot speed);
+    // fall back to the enemy's present position rather than missing.
+    return { x: target.x, y: target.y };
+  }
+  const cap = t > 1.5 ? 1.5 : t; // do not lead across the whole map
+  return { x: target.x + vx * cap, y: target.y + vy * cap };
+}
+
+function acquireTarget(t) {
+  const rangePx = t.range * CELL;
+  let best = null;
+  let bestProg = -1;
+  for (const e of enemies) {
+    if (e.dead || e.leaked) continue;
+    const dx = e.x - t.x;
+    const dy = e.y - t.y;
+    if (dx * dx + dy * dy > rangePx * rangePx) continue;
+    const prog = enemyProgress(e);
+    if (prog > bestProg) {
+      bestProg = prog;
+      best = e;
+    }
+  }
+  return best;
+}
+
+function updateTower(t, dt) {
+  if (t.cooldown > 0) t.cooldown = Math.max(0, t.cooldown - dt);
+  if (t.pulse > 0) t.pulse = Math.max(0, t.pulse - dt);
+  if (t.cooldown > 0) return;
+
+  const target = acquireTarget(t);
+  if (!target) return;
+
+  const aim = predictIntercept(target, TOWER_TYPES[t.type].projectileSpeed, t.x, t.y);
+  const dx = aim.x - t.x;
+  const dy = aim.y - t.y;
+  const dist = Math.hypot(dx, dy);
+  if (dist < 0.0001) return;
+  const sp = TOWER_TYPES[t.type].projectileSpeed;
+
+  t.angle = Math.atan2(dy, dx);
+  t.cooldown = t.fireCooldown;
+  t.pulse = 0.12;
+  projectiles.push({
+    x: t.x,
+    y: t.y,
+    vx: (dx / dist) * sp,
+    vy: (dy / dist) * sp,
+    radius: t.type === "frost" ? 4 : 3.5,
+    damage: t.damage,
+    color: TOWER_TYPES[t.type].color,
+    slows: !!TOWER_TYPES[t.type].slows,
+    life: 1.6
+  });
+}
+
+function updateProjectiles(dt) {
+  for (const p of projectiles) {
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.life -= dt;
+    if (p.life <= 0 || p.x < -20 || p.x > W + 20 || p.y < -20 || p.y > H + 20) {
+      p.dead = true;
+      continue;
+    }
+    for (const e of enemies) {
+      if (e.dead || e.leaked) continue;
+      const dx = e.x - p.x;
+      const dy = e.y - p.y;
+      const rr = e.radius + p.radius;
+      if (dx * dx + dy * dy <= rr * rr) {
+        damageEnemy(e, p.damage, p.slows);
+        p.dead = true;
+        break;
+      }
+    }
+  }
+  projectiles = projectiles.filter((p) => !p.dead);
+}
+
+/* ============================== Waves ================================= */
+
+function startWave() {
+  if (state.waveInProgress || state.gameOver) return;
+  state.wave += 1;
+  state.waveInProgress = true;
+  state.toSpawn = 6 + 3 * state.wave;
+  state.spawnTimer = 0;
+  toast("Wave " + state.wave + " incoming");
+  syncHud();
+}
+
+function updateWave(dt) {
+  if (!state.waveInProgress) return;
+  if (state.toSpawn > 0) {
+    state.spawnTimer -= dt;
+    if (state.spawnTimer <= 0) {
+      spawnEnemy();
+      state.toSpawn -= 1;
+      state.spawnTimer = SPAWN_STAGGER;
+    }
+  } else if (enemies.length === 0) {
+    state.waveInProgress = false;
+    const bonus = 20 + state.wave * 5;
+    state.gold += bonus;
+    toast("Wave cleared! +" + bonus + " gold");
+    syncHud();
+  }
+}
+
+/* ============================== Update ================================ */
+
+function update(dt) {
+  if (state.gameOver) return;
+  updateWave(dt);
+  for (const e of enemies) updateEnemy(e, dt);
+  enemies = enemies.filter((e) => !e.dead && !e.leaked);
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const t = towerGrid[r][c];
+      if (t) updateTower(t, dt);
+    }
+  }
+  updateProjectiles(dt);
+}
+
+/* ============================== Rendering ============================= */
+
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+function roundRectPath(x, y, w, h, rad) {
+  ctx.beginPath();
+  ctx.moveTo(x + rad, y);
+  ctx.arcTo(x + w, y, x + w, y + h, rad);
+  ctx.arcTo(x + w, y + h, x, y + h, rad);
+  ctx.arcTo(x, y + h, x, y, rad);
+  ctx.arcTo(x, y, x + w, y, rad);
+  ctx.closePath();
+}
+
+function drawRangeCircle(x, y, rangeCells, color, alpha) {
+  const r = rangeCells * CELL;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = Math.min(1, alpha * 3);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([6, 5]);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function render() {
+  // Ground + grid
+  ctx.fillStyle = "#1b1b22";
+  ctx.fillRect(0, 0, W, H);
+  ctx.strokeStyle = "rgba(255,255,255,0.045)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let c = 1; c < COLS; c++) {
+    const p = cellToPixel(c, 0);
+    ctx.moveTo(p.x + 0.5, 0);
+    ctx.lineTo(p.x + 0.5, H);
+  }
+  for (let r = 1; r < ROWS; r++) {
+    const p = cellToPixel(0, r);
+    ctx.moveTo(0, p.y + 0.5);
+    ctx.lineTo(W, p.y + 0.5);
+  }
+  ctx.stroke();
+
+  // Path tiles (cells of the live route)
+  ctx.fillStyle = "#3d3428";
+  for (const cell of route) {
+    const p = cellToPixel(cell.c, cell.r);
+    ctx.fillRect(p.x + 1, p.y + 1, CELL - 2, CELL - 2);
+  }
+
+  // Entry gate: mint chevron
+  {
+    const p = cellToPixel(ENTRY.c, ENTRY.r);
+    ctx.fillStyle = "#06d6a0";
+    ctx.beginPath();
+    ctx.moveTo(p.x + 6, p.y + 8);
+    ctx.lineTo(p.x + 18, p.y + CELL / 2);
+    ctx.lineTo(p.x + 6, p.y + CELL - 8);
+    ctx.closePath();
+    ctx.fill();
+  }
+  // Exit gate: amber ring
+  {
+    const cc = cellCenter(EXIT.c, EXIT.r);
+    ctx.strokeStyle = "#ffd166";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(cc.x, cc.y, 9, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = "#ffd166";
+    ctx.beginPath();
+    ctx.arc(cc.x, cc.y, 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Selected tower range
+  if (state.selected) {
+    const t = state.selected;
+    drawRangeCircle(t.x, t.y, t.range, "#06d6a0", 0.08);
+  }
+
+  // Towers
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const t = towerGrid[r][c];
+      if (t) drawTower(t);
+    }
+  }
+
+  // Enemies
+  for (const e of enemies) drawEnemy(e);
+
+  // Projectiles
+  for (const p of projectiles) {
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Hover preview
+  if (state.hover && !state.gameOver) {
+    const { c, r } = state.hover;
+    if (!towerGrid[r][c]) {
+      const center = cellCenter(c, r);
+      const type = TOWER_TYPES[state.buildType];
+      const check = canPlace(c, r);
+      const affordable = state.gold >= type.cost;
+      const ok = check.ok && affordable;
+      const tint = ok ? type.color : "#ef476f";
+      drawRangeCircle(center.x, center.y, type.range, tint, ok ? 0.07 : 0.05);
+      ctx.save();
+      ctx.globalAlpha = 0.55;
+      drawTowerBody(center.x, center.y, type.color, 0, 1, ok);
+      ctx.restore();
+      if (!ok) {
+        const p = cellToPixel(c, r);
+        ctx.strokeStyle = "#ef476f";
+        ctx.lineWidth = 2;
+        roundRectPath(p.x + 4, p.y + 4, CELL - 8, CELL - 8, 6);
+        ctx.stroke();
+      }
+    }
+  }
+}
+
+function drawTowerBody(x, y, color, angle, level, valid) {
+  // Base plate
+  ctx.fillStyle = valid ? "#262633" : "#3a2028";
+  roundRectPath(x - 12, y - 12, 24, 24, 6);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(0,0,0,0.45)";
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  // Barrel
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(angle);
+  ctx.fillStyle = color;
+  roundRectPath(0, -3, 15, 6, 3);
+  ctx.fill();
+  ctx.restore();
+  // Head
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(x, y, 8, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "rgba(0,0,0,0.35)";
+  ctx.beginPath();
+  ctx.arc(x, y, 3.5, 0, Math.PI * 2);
+  ctx.fill();
+  // Level pips
+  if (level > 1) {
+    ctx.fillStyle = "#ffd166";
+    for (let i = 0; i < level - 1; i++) {
+      ctx.beginPath();
+      ctx.arc(x - 8 + i * 4, y + 12, 1.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
+function drawTower(t) {
+  if (t.pulse > 0) {
+    ctx.save();
+    ctx.globalAlpha = (t.pulse / 0.12) * 0.35;
+    ctx.fillStyle = TOWER_TYPES[t.type].color;
+    ctx.beginPath();
+    ctx.arc(t.x, t.y, 13, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  drawTowerBody(t.x, t.y, TOWER_TYPES[t.type].color, t.angle, t.level, true);
+  if (state.selected === t) {
+    ctx.strokeStyle = "#06d6a0";
+    ctx.lineWidth = 2;
+    roundRectPath(t.x - 14, t.y - 14, 28, 28, 7);
+    ctx.stroke();
+  }
+}
+
+function drawEnemy(e) {
+  const slowed = e.slowTimer > 0;
+  // Body
+  ctx.fillStyle = "#ef476f";
+  ctx.beginPath();
+  ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "rgba(0,0,0,0.4)";
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  // Eye facing movement direction
+  const sp = Math.hypot(e.vx, e.vy);
+  if (sp > 1) {
+    const ux = e.vx / sp;
+    const uy = e.vy / sp;
+    ctx.fillStyle = "#0e0e14";
+    ctx.beginPath();
+    ctx.arc(e.x + ux * 3.5, e.y + uy * 3.5, 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // Slow tint
+  if (slowed) {
+    ctx.save();
+    ctx.globalAlpha = 0.45;
+    ctx.strokeStyle = "#b8c0ff";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(e.x, e.y, e.radius + 2.5, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+  // Health bar
+  const barW = 20;
+  const barH = 4;
+  const bx = e.x - barW / 2;
+  const by = e.y - e.radius - 9;
+  ctx.fillStyle = "rgba(0,0,0,0.55)";
+  ctx.fillRect(bx - 1, by - 1, barW + 2, barH + 2);
+  ctx.fillStyle = "#06d6a0";
+  const frac = Math.max(0, e.hp / e.maxHp);
+  ctx.fillRect(bx, by, barW * frac, barH);
+}
+
+/* ============================== HUD / UI ============================== */
+
+const elGold = document.getElementById("gold");
+const elLives = document.getElementById("lives");
+const elWave = document.getElementById("wave");
+const elToast = document.getElementById("toast");
+const elOverlay = document.getElementById("overlay");
+const elSelNone = document.getElementById("sel-none");
+const elSelBox = document.getElementById("sel-box");
+const elSelTitle = document.getElementById("sel-title");
+const elSelStats = document.getElementById("sel-stats");
+const elSelCosts = document.getElementById("sel-costs");
+const btnWave = document.getElementById("btn-wave");
+const btnSpeed = document.getElementById("btn-speed");
+const btnUpgrade = document.getElementById("btn-upgrade");
+const btnSell = document.getElementById("btn-sell");
+const btnRestart = document.getElementById("btn-restart");
+const towerBtns = Array.from(document.querySelectorAll(".tower-btn"));
+
+let toastTimer = 0;
+function toast(msg, bad) {
+  elToast.textContent = msg;
+  elToast.classList.toggle("bad", !!bad);
+  elToast.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => elToast.classList.remove("show"), 2200);
+}
+
+function syncHud() {
+  elGold.textContent = String(state.gold);
+  elLives.textContent = String(state.lives);
+  elWave.textContent = String(state.wave) + (state.waveInProgress ? " ▸" : "");
+  btnWave.disabled = state.waveInProgress || state.gameOver;
+  btnWave.textContent = state.waveInProgress ? "Wave in progress" : "Start Wave";
+
+  towerBtns.forEach((btn) => {
+    btn.classList.toggle("selected", btn.dataset.type === state.buildType);
+  });
+
+  const t = state.selected;
+  if (!t) {
+    elSelNone.classList.remove("hidden");
+    elSelBox.classList.add("hidden");
+    return;
+  }
+  elSelNone.classList.add("hidden");
+  elSelBox.classList.remove("hidden");
+  const type = TOWER_TYPES[t.type];
+  elSelTitle.textContent = type.name + "  ·  Lv " + t.level + (t.level >= MAX_LEVEL ? " (max)" : "");
+  elSelStats.innerHTML =
+    "Damage <b>" + t.damage + "</b> &nbsp; Range <b>" + t.range.toFixed(1) + "</b><br>" +
+    "Rate <b>" + (1 / t.fireCooldown).toFixed(1) + "/s</b> &nbsp; " +
+    (type.slows ? "Chills enemies" : "Single-target");
+  if (t.level >= MAX_LEVEL) {
+    elSelCosts.textContent = "Max level reached.";
+    btnUpgrade.disabled = true;
+  } else {
+    const cost = upgradeCost(t);
+    elSelCosts.textContent = "Upgrade " + cost + "g · Sell " + Math.round(t.invested * SELL_RATIO) + "g";
+    btnUpgrade.disabled = state.gold < cost;
+  }
+  btnSell.disabled = false;
+}
+
+function selectBuildType(type) {
+  state.buildType = type;
+  state.selected = null;
+  syncHud();
+}
+
+towerBtns.forEach((btn) => {
+  btn.addEventListener("click", () => selectBuildType(btn.dataset.type));
+});
+
+btnWave.addEventListener("click", startWave);
+
+btnSpeed.addEventListener("click", () => {
+  state.speed = state.speed === 1 ? 2 : 1;
+  btnSpeed.textContent = "Speed: " + state.speed + "x";
+  btnSpeed.classList.toggle("fast", state.speed === 2);
+});
+
+btnUpgrade.addEventListener("click", () => upgradeTower(state.selected));
+btnSell.addEventListener("click", () => sellTower(state.selected));
+
+btnRestart.addEventListener("click", resetGame);
+
+document.addEventListener("keydown", (ev) => {
+  if (ev.key === "1") selectBuildType("gun");
+  else if (ev.key === "2") selectBuildType("frost");
+  else if (ev.key === "u" || ev.key === "U") upgradeTower(state.selected);
+  else if (ev.key === "s" || ev.key === "S") sellTower(state.selected);
+  else if (ev.key === " ") {
+    ev.preventDefault();
+    startWave();
+  } else if (ev.key === "Escape") {
+    state.selected = null;
+    syncHud();
+  }
+});
+
+/* ============================== Canvas input ========================== */
+
+function eventCell(ev) {
+  const rect = canvas.getBoundingClientRect();
+  const x = (ev.clientX - rect.left) * (W / rect.width);
+  const y = (ev.clientY - rect.top) * (H / rect.height);
+  return pixelToCell(x, y);
+}
+
+canvas.addEventListener("mousemove", (ev) => {
+  state.hover = eventCell(ev);
+});
+
+canvas.addEventListener("mouseleave", () => {
+  state.hover = null;
+});
+
+canvas.addEventListener("click", (ev) => {
+  if (state.gameOver) return;
+  const cell = eventCell(ev);
+  const existing = towerGrid[cell.r][cell.c];
+  if (existing) {
+    // Clicking a placed tower selects it (and shows its range).
+    state.selected = existing;
+    syncHud();
+    return;
+  }
+  state.selected = null;
+  buildTower(cell.c, cell.r);
+  syncHud();
+});
+
+/* ============================== Game over / reset ===================== */
+
+function showGameOver() {
+  elOverlay.classList.remove("hidden");
+  document.getElementById("overlay-title").textContent = "Game Over";
+  document.getElementById("overlay-sub").textContent =
+    "The horde broke through on wave " + state.wave + ".";
+}
+
+function resetGame() {
+  state.gold = START_GOLD;
+  state.lives = START_LIVES;
+  state.wave = 0;
+  state.waveInProgress = false;
+  state.toSpawn = 0;
+  state.spawnTimer = 0;
+  state.gameOver = false;
+  state.selected = null;
+  enemies = [];
+  projectiles = [];
+  makeTowerGrid();
+  recomputeRoute();
+  elOverlay.classList.add("hidden");
+  toast("Fresh maze. Good luck.");
+  syncHud();
+}
+
+/* ============================== Main loop ============================= */
+/* requestAnimationFrame drives everything. dt comes from the timestamp
+   delta and scales every movement, cooldown and timer below; the speed
+   toggle is just a multiplier on dt, never a second loop. */
+
+let lastTime = 0;
+
+function frame(ts) {
+  if (lastTime === 0) lastTime = ts;
+  let dt = (ts - lastTime) / 1000;
+  lastTime = ts;
+  if (dt > 0.1) dt = 0.1; // tab was backgrounded; do not fast-forward
+  dt *= state.speed;      // 1x or 2x: a pure delta-time multiplier
+
+  update(dt);
+  render();
+  syncHud();
+  requestAnimationFrame(frame);
+}
+
+/* ============================== Boot ================================== */
+
+makeTowerGrid();
+recomputeRoute();
+syncHud();
+requestAnimationFrame(frame);
+
+})();
+</script>
+</body>
+</html>

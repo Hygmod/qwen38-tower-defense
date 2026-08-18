@@ -144,9 +144,13 @@ def path_call_sites(js):
 def has_placement_validation(js):
     """A placement path that runs the search against a candidate grid and can
     refuse. Looks for a rejection/validity vocabulary near a path call."""
+    # Trailing \w* matters: the first real run named this canPlaceTower, which a
+    # \b-anchored `canPlace` does not match, and the model renamed a correct
+    # function purely to satisfy this regex. Suffixes are normal English.
     guard = re.search(
-        r"\b(wouldBlock|blocksPath|isValidPlacement|canPlace|canBuild|validPlacement|"
-        r"placementValid|willSeal|sealsPath|isBlocked|pathExists|hasPath)\b",
+        r"\b(wouldBlock\w*|blocksPath\w*|isValidPlacement\w*|canPlace\w*|canBuild\w*|"
+        r"validPlacement\w*|placementValid\w*|willSeal\w*|sealsPath\w*|isBlocked\w*|"
+        r"pathExists\w*|hasPath\w*)\b",
         js,
     )
     # A candidate/trial copy of the grid, however it is spelled.
