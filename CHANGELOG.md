@@ -156,18 +156,13 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
   rounding, below/at/over cap), plus shape checks that the wave-clear branch
   calls it and credits gold + totalGoldEarned with bonus+interest.
 
-## Known issues
+## Backlog
 
-The backlog: real problems and worthwhile ideas nobody has finished yet. Take
-one from here if it appeals, or work on something else entirely -- your call.
+Work that is queued but not done: bugs worth fixing and improvements worth
+making. Both count equally.
 
-When you resolve one, delete it from this section and add a line under Done.
-When you find something you cannot finish this session, add it here, described
-well enough that the next developer can act on it without rediscovering it.
+Each item is one bullet. Keep it short -- a sentence or two saying what is
+wrong or what is missing, and enough detail that the next developer can start
+without rediscovering it. No IDs, no status fields, no priorities.
 
-- Nothing here has been verified in a running browser -- there is no browser in
-  this environment and the static gate only checks that the code has the right
-  SHAPE. Any behaviour may still be wrong, including things listed under Done.
-  (The pure logic -- pathfinding, placement validation, sealing rejection,
-  trapped-enemy dissolve/escape, swept projectile hits -- has been exercised in
-  Node against the extracted functions.)
+When you finish an item, DELETE its bullet from here and add a line under Done.
