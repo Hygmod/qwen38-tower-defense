@@ -142,6 +142,19 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
   against the extracted functions: 12 cases pass (partial-hit tally, kill
   attribution, gold reward, no-src safety, dead-enemy no-recount, splash
   multi-victim credit with falloff bounds).
+- Added gold interest (classic TD banking): each cleared wave now banks
+  5% of the gold still on hand, capped at 30g per wave (INTEREST_RATE /
+  INTEREST_CAP, shared helper waveInterest()), credited to both state.gold
+  and state.totalGoldEarned alongside the wave bonus, with the amount called
+  out in the wave-clear toast. This turns the existing "save for the boss"
+  strategy (next-wave preview) into a real save-vs-spend decision: hoarding
+  pays a little, spending now loses the bank. The Next row now shows a live
+  "bank +Ng" figure (recomputed each frame from current gold) so the player
+  sees what a clear would pay, and the legend hints at the mechanic. The cap
+  keeps late-game hoards from snowballing past ~one tower per wave. Verified
+  in Node against the extracted waveInterest: 8/8 cases pass (zero, floor
+  rounding, below/at/over cap), plus shape checks that the wave-clear branch
+  calls it and credits gold + totalGoldEarned with bonus+interest.
 
 ## Known issues
 

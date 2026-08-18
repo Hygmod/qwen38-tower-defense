@@ -288,6 +288,7 @@
       Brutes soak up damage – set a tower to Strong targeting or box them in.
       Bosses arrive at the tail of waves 5, 10, 15… – concentrate fire or slow them.
       The <b>Next</b> row shows the exact lineup of the coming wave – save gold accordingly.
+      Saved gold banks <b>5% interest</b> (max 30g) on every cleared wave – hoarding for a boss pays.
     </div>
     <div class="hint">
       Enemies route from the green gate (left) to the amber gate (right) via
@@ -375,6 +376,8 @@ const SELL_RATIO = 0.7;    // refund 70% of everything invested
 const START_GOLD = 200;
 const START_LIVES = 20;
 const SPAWN_STAGGER = 0.75; // seconds between enemy spawns in a wave
+const INTEREST_RATE = 0.05; // gold earned per wave clear: 5% of gold on hand
+const INTEREST_CAP = 30;    // ...banked at most 30g per wave (no snowball)
 
 /* ============================== Sound ================================ */
 /* All audio is synthesized live with the Web Audio API — no files, no
@@ -1100,6 +1103,11 @@ function updateProjectiles(dt) {
    of every 5th wave. Rolling up front (instead of per spawn) is what lets the
    side panel show an honest preview of who is coming, so the player can save
    gold for a boss or prep anti-scout frost before it arrives. */
+/* Gold banked when a wave clears: INTEREST_RATE of gold on hand, capped. */
+function waveInterest(gold) {
+  return Math.min(INTEREST_CAP, Math.floor(gold * INTEREST_RATE));
+}
+
 function planWave(w) {
   const count = 6 + 3 * w;
   const q = [];
@@ -1134,9 +1142,13 @@ function updateWave(dt) {
   if (state.toSpawn === 0 && enemies.length === 0) {
     state.waveInProgress = false;
     const bonus = 20 + state.wave * 5;
-    state.gold += bonus;
-    state.totalGoldEarned += bonus;
-    toast("Wave cleared! +" + bonus + " gold");
+    // Banking: hold onto gold and it works for you. Each cleared wave banks
+    // INTEREST_RATE of whatever gold you still have, up to INTEREST_CAP, so
+    // saving for a big cannon or an upgrade against a boss wave pays a little.
+    const interest = waveInterest(state.gold);
+    state.gold += bonus + interest;
+    state.totalGoldEarned += bonus + interest;
+    toast("Wave cleared! +" + bonus + " gold" + (interest > 0 ? " (+" + interest + "g interest)" : ""));
     Sound.waveClear();
     syncHud();
   }
@@ -1547,7 +1559,9 @@ function syncHud() {
   } else {
     elWaveInfo.classList.add("hidden");
   }
-  const nwHtml = state.gameOver ? "" : "Next " + (state.wave + 1) + ": " + nextWavePreviewHtml();
+  const bank = waveInterest(state.gold);
+  const nwHtml = state.gameOver ? "" : "Next " + (state.wave + 1) + ": " + nextWavePreviewHtml() +
+    (bank > 0 ? " &nbsp;·&nbsp; bank <b style=\"color:var(--amber)\">+" + bank + "g</b>" : "");
   if (nwHtml !== lastNwHtml) {
     lastNwHtml = nwHtml;
     elNextWave.innerHTML = nwHtml;
