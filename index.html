@@ -173,6 +173,18 @@
   button.action:disabled { opacity: 0.4; cursor: default; }
   #btn-upgrade { border-color: rgba(76, 201, 240, 0.4); }
   #btn-sell { border-color: rgba(255, 209, 102, 0.4); }
+  .mode-btn {
+    background: #20202c;
+    color: var(--muted);
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    padding: 6px 4px;
+    font: inherit; font-size: 11px; font-weight: 700; letter-spacing: 0.2px;
+    cursor: pointer;
+    transition: color 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+  }
+  .mode-btn:hover { background: #242433; color: var(--text); }
+  .mode-btn.selected { border-color: var(--mint); color: var(--mint); box-shadow: 0 0 0 1px var(--mint) inset; }
   .muted { color: var(--muted); font-size: 12px; }
   #sel-title { font-weight: 800; font-size: 14px; }
   #sel-stats { font-size: 12px; line-height: 1.6; }
@@ -229,6 +241,14 @@
       <div id="sel-box" class="hidden" style="display:flex;flex-direction:column;gap:8px;">
         <div id="sel-title">Gun Tower</div>
         <div id="sel-stats" class="muted"></div>
+        <div id="sel-mode" class="muted" style="font-size:10px;letter-spacing:1.6px;text-transform:uppercase;margin-top:2px;">Targeting</div>
+        <div class="row" id="sel-modes" style="gap:6px;">
+          <button class="mode-btn selected" data-mode="first">First</button>
+          <button class="mode-btn" data-mode="last">Last</button>
+          <button class="mode-btn" data-mode="strong">Strong</button>
+          <button class="mode-btn" data-mode="close">Close</button>
+        </div>
+        <div class="hint">First: nearest the gate. Strong: focus fire (brutes). Close: nearest here.</div>
         <div class="row">
           <button class="action" id="btn-upgrade">Upgrade</button>
           <button class="action" id="btn-sell">Sell</button>
@@ -251,7 +271,7 @@
       <span style="color:#f78fb3;">●</span> Scout (fast · wave 3+) &nbsp;
       <span style="color:#c9184a;">●</span> Brute (tough · wave 5+)<br>
       Scouts outrun slow towers – frost or high fire-rate helps.
-      Brutes soak up damage – concentrate fire or box them in.
+      Brutes soak up damage – set a tower to Strong targeting or box them in.
     </div>
     <div class="hint">
       Enemies route from the green gate (left) to the amber gate (right) via
@@ -509,6 +529,7 @@ function buildTower(c, r) {
   const t = {
     c, r,
     type: state.buildType,
+    mode: "first", // targeting mode: first | last | strong | close
     level: 1,
     invested: type.cost,
     damage: type.damage,
@@ -744,26 +765,42 @@ function predictIntercept(target, speed, sx, sy) {
   return { x: target.x + vx * cap, y: target.y + vy * cap };
 }
 
+/* Targeting modes (set per tower from the Selected Tower panel):
+   first  – enemy closest to the exit (progress). The default.
+   last   – enemy furthest from the exit (progress).
+   strong – enemy with the most current HP (focus fire / brutes).
+   close  – enemy nearest to the tower.
+   Each mode falls back to the others for tie-breaking so the pick is
+   deterministic. best starts null so the FIRST enemy in range is always
+   taken -- that keeps a lone boxed-in enemy (progress -1) targetable, which
+   is what makes the "box them in" kill strategy work. */
 function acquireTarget(t) {
   const rangePx = t.range * CELL;
-  let best = null;
-  // -Infinity, not -1: a boxed-in enemy reports progress -1, so starting the
-  // comparison at -1 (with the strict > below) would make it lose its own
-  // "shootable when alone" tie and no tower would ever fire on it -- which
-  // broke the "box them in" kill strategy (the trapped enemy would just sit
-  // and dissolve for no gold). -Infinity keeps every real enemy (progress >=
-  // 0) strictly ahead of a boxed-in one while still letting a lone boxed-in
-  // enemy be targeted.
-  let bestProg = -Infinity;
+  const mode = t.mode || "first";
+  let best = null, bestProg = -Infinity, bestHp = -1, bestDist2 = Infinity;
+  const better = (e, prog, d2) => {
+    if (best === null) return true;
+    switch (mode) {
+      case "last":
+        return prog < bestProg || (prog === bestProg && d2 < bestDist2);
+      case "strong":
+        return e.hp > bestHp || (e.hp === bestHp && (prog > bestProg || (prog === bestProg && d2 < bestDist2)));
+      case "close":
+        return d2 < bestDist2 || (d2 === bestDist2 && prog > bestProg);
+      case "first":
+      default:
+        return prog > bestProg || (prog === bestProg && d2 < bestDist2);
+    }
+  };
   for (const e of enemies) {
     if (e.dead || e.leaked) continue;
     const dx = e.x - t.x;
     const dy = e.y - t.y;
-    if (dx * dx + dy * dy > rangePx * rangePx) continue;
+    const d2 = dx * dx + dy * dy;
+    if (d2 > rangePx * rangePx) continue;
     const prog = enemyProgress(e);
-    if (prog > bestProg) {
-      bestProg = prog;
-      best = e;
+    if (better(e, prog, d2)) {
+      best = e; bestProg = prog; bestHp = e.hp; bestDist2 = d2;
     }
   }
   return best;
@@ -1181,6 +1218,7 @@ const btnUpgrade = document.getElementById("btn-upgrade");
 const btnSell = document.getElementById("btn-sell");
 const btnRestart = document.getElementById("btn-restart");
 const towerBtns = Array.from(document.querySelectorAll(".tower-btn"));
+const modeBtns = Array.from(document.querySelectorAll(".mode-btn"));
 
 let toastTimer = 0;
 function toast(msg, bad) {
@@ -1219,6 +1257,7 @@ function syncHud() {
   elSelNone.classList.add("hidden");
   elSelBox.classList.remove("hidden");
   const type = TOWER_TYPES[t.type];
+  modeBtns.forEach((b) => b.classList.toggle("selected", b.dataset.mode === t.mode));
   elSelTitle.textContent = type.name + "  ·  Lv " + t.level + (t.level >= MAX_LEVEL ? " (max)" : "");
   elSelStats.innerHTML =
     "Damage <b>" + t.damage + "</b> &nbsp; Range <b>" + t.range.toFixed(1) + "</b><br>" +
@@ -1243,6 +1282,15 @@ function selectBuildType(type) {
 
 towerBtns.forEach((btn) => {
   btn.addEventListener("click", () => selectBuildType(btn.dataset.type));
+});
+
+modeBtns.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    if (state.selected) {
+      state.selected.mode = btn.dataset.mode;
+      syncHud();
+    }
+  });
 });
 
 btnWave.addEventListener("click", startWave);

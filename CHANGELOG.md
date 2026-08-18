@@ -67,6 +67,16 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
   >= 0) still strictly outranks it. Verified in Node against the extracted
   functions: boxed-alone now shoots, real-alone and both (either order) still
   pick the real enemy, empty stays null.
+- Added per-tower targeting modes (First/Last/Strong/Close), selectable from a
+  segmented control in the Selected Tower panel: acquireTarget() now branches on
+  t.mode (default "first"), so you can focus-fire brutes (Strong), pick off the
+  rearmost (Last), or shoot the nearest (Close). Each mode falls back to the
+  others for deterministic tie-breaking, and best still starts null so a lone
+  boxed-in enemy stays targetable (kill-box preserved). New .mode-btn control +
+  default mode field in buildTower + a hint tying Strong to brute counterplay.
+  Verified in Node against the extracted acquireTarget: 14 cases (each mode,
+  default, boxed-alone, real-outranks-boxed, out-of-range ignore, tie-break,
+  dead/leaked-skip) all pass.
 
 ## Known issues
 
