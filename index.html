@@ -53,6 +53,17 @@
   }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   .toast.bad { border-color: rgba(239, 71, 111, 0.55); color: #ff9eb5; }
+  .pause-badge {
+    position: absolute; bottom: 14px; left: 50%;
+    transform: translateX(-50%);
+    background: rgba(14, 14, 20, 0.9);
+    border: 1px solid var(--amber);
+    color: var(--amber);
+    padding: 6px 14px; border-radius: 999px;
+    font-size: 12px; font-weight: 700; letter-spacing: 2px;
+    pointer-events: none; line-height: 1.4;
+  }
+  .pause-badge.hidden { display: none; }
   .overlay {
     position: absolute; inset: 0;
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
@@ -179,6 +190,7 @@
   <div class="stage">
     <canvas id="game" width="640" height="480"></canvas>
     <div id="toast" class="toast"></div>
+    <div id="pause-badge" class="pause-badge hidden">Paused</div>
     <div id="overlay" class="overlay hidden">
       <h2 id="overlay-title">Game Over</h2>
       <p id="overlay-sub">The horde broke through.</p>
@@ -227,7 +239,10 @@
 
     <div class="section" style="gap:8px;">
       <button class="primary" id="btn-wave">Start Wave</button>
-      <button class="ghost" id="btn-speed">Speed: 1x</button>
+      <div class="row">
+        <button class="ghost" id="btn-speed">Speed: 1x</button>
+        <button class="ghost" id="btn-pause">Pause</button>
+      </div>
     </div>
 
     <div class="hint" style="margin-top:2px;">
@@ -242,7 +257,8 @@
       Enemies route from the green gate (left) to the amber gate (right) via
       live pathfinding around your towers. A placement that would seal the
       maze is rejected. Keys: <kbd>1</kbd> gun, <kbd>2</kbd> frost,
-      <kbd>U</kbd> upgrade, <kbd>S</kbd> sell, <kbd>Space</kbd> start wave.
+      <kbd>U</kbd> upgrade, <kbd>S</kbd> sell, <kbd>Space</kbd> start wave,
+      <kbd>P</kbd> pause.
     </div>
   </aside>
 </div>
@@ -324,6 +340,7 @@ const state = {
   spawnTimer: 0,
   gameOver: false,
   speed: 1,        // 1 or 2; applied as a multiplier on delta time
+  paused: false,   // freezes update() but keeps rendering so you can plan builds
   buildType: "gun",
   selected: null,  // the tower object the player has selected
   hover: null      // { c, r } cell under the mouse, or null
@@ -1151,6 +1168,8 @@ const elSelStats = document.getElementById("sel-stats");
 const elSelCosts = document.getElementById("sel-costs");
 const btnWave = document.getElementById("btn-wave");
 const btnSpeed = document.getElementById("btn-speed");
+const btnPause = document.getElementById("btn-pause");
+const elPauseBadge = document.getElementById("pause-badge");
 const btnUpgrade = document.getElementById("btn-upgrade");
 const btnSell = document.getElementById("btn-sell");
 const btnRestart = document.getElementById("btn-restart");
@@ -1178,6 +1197,7 @@ function syncHud() {
   }
   btnWave.disabled = state.waveInProgress || state.gameOver;
   btnWave.textContent = state.waveInProgress ? "Wave in progress" : "Start Wave";
+  btnPause.disabled = state.gameOver;
 
   towerBtns.forEach((btn) => {
     btn.classList.toggle("selected", btn.dataset.type === state.buildType);
@@ -1226,6 +1246,15 @@ btnSpeed.addEventListener("click", () => {
   btnSpeed.classList.toggle("fast", state.speed === 2);
 });
 
+function togglePause() {
+  if (state.gameOver) return;
+  state.paused = !state.paused;
+  btnPause.textContent = state.paused ? "Resume" : "Pause";
+  btnPause.classList.toggle("fast", state.paused);
+  elPauseBadge.classList.toggle("hidden", !state.paused);
+}
+btnPause.addEventListener("click", togglePause);
+
 btnUpgrade.addEventListener("click", () => upgradeTower(state.selected));
 btnSell.addEventListener("click", () => sellTower(state.selected));
 
@@ -1239,6 +1268,8 @@ document.addEventListener("keydown", (ev) => {
   else if (ev.key === " ") {
     ev.preventDefault();
     startWave();
+  } else if (ev.key === "p" || ev.key === "P") {
+    togglePause();
   } else if (ev.key === "Escape") {
     state.selected = null;
     syncHud();
@@ -1294,7 +1325,11 @@ function resetGame() {
   state.toSpawn = 0;
   state.spawnTimer = 0;
   state.gameOver = false;
+  state.paused = false;
   state.selected = null;
+  btnPause.textContent = "Pause";
+  btnPause.classList.remove("fast");
+  elPauseBadge.classList.add("hidden");
   enemies = [];
   projectiles = [];
   makeTowerGrid();
@@ -1318,7 +1353,7 @@ function frame(ts) {
   if (dt > 0.1) dt = 0.1; // tab was backgrounded; do not fast-forward
   dt *= state.speed;      // 1x or 2x: a pure delta-time multiplier
 
-  update(dt);
+  if (!state.paused) update(dt); // paused: freeze simulation, keep rendering
   render();
   syncHud();
   requestAnimationFrame(frame);

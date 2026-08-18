@@ -50,6 +50,13 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
   drawEnemy() now reads e.color instead of a hard-coded pink. A legend in the
   side panel explains each type and hints at counterplay (frost for scouts,
   concentrated fire for brutes).
+- Added a Pause feature: a Pause/Resume button in the controls plus a `P`
+  hotkey freeze the simulation while the render loop keeps running, so you can
+  plan tower placement mid-wave without racing the enemies. `lastTime` still
+  updates every frame so resuming never fast-forwards, and building while
+  paused works and takes effect on resume. A "Paused" badge shows over the
+  canvas; the button is disabled at game over and its state/UI reset cleanly
+  on Play Again.
 
 ## Known issues
 
