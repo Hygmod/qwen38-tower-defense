@@ -281,9 +281,10 @@
       <span style="color:#ef476f;">●</span> Normal &nbsp;
       <span style="color:#f78fb3;">●</span> Scout (fast · wave 3+) &nbsp;
       <span style="color:#c9184a;">●</span> Brute (tough · wave 5+)<br>
+      <span style="color:#7209b7;">●</span> Boss (every 5th wave – very tough, big reward)<br>
       Scouts outrun slow towers – frost or high fire-rate helps.
       Brutes soak up damage – set a tower to Strong targeting or box them in.
-      Cannons blast a whole cluster at once – ideal against dense waves.
+      Bosses arrive at the tail of waves 5, 10, 15… – concentrate fire or slow them.
     </div>
     <div class="hint">
       Enemies route from the green gate (left) to the amber gate (right) via
@@ -388,7 +389,8 @@ const state = {
   selected: null,  // the tower object the player has selected
   hover: null,     // { c, r } cell under the mouse, or null
   kills: 0,
-  totalGoldEarned: 0
+  totalGoldEarned: 0,
+  bossSpawned: false
 };
 let bestWave = parseInt(localStorage.getItem("td-best-wave") || "0", 10);
 
@@ -617,7 +619,8 @@ function upgradeTower(t) {
 const ENEMY_TYPES = {
   normal: { hpMul: 1.0,  spdMul: 1.0,  radius: 9,  color: "#ef476f", rewardMul: 1.0  },
   scout:  { hpMul: 0.45, spdMul: 1.7,  radius: 7,  color: "#f78fb3", rewardMul: 0.8  },
-  brute:  { hpMul: 2.8,  spdMul: 0.55, radius: 13, color: "#c9184a", rewardMul: 1.6  }
+  brute:  { hpMul: 2.8,  spdMul: 0.55, radius: 13, color: "#c9184a", rewardMul: 1.6  },
+  boss:   { hpMul: 8.0,  spdMul: 0.40, radius: 18, color: "#7209b7", rewardMul: 5.0  }
 };
 
 function pickEnemyType(wave) {
@@ -627,10 +630,10 @@ function pickEnemyType(wave) {
   return "normal";
 }
 
-function spawnEnemy() {
+function spawnEnemy(forceType) {
   const wave = state.wave;
   const start = cellCenter(ENTRY.c, ENTRY.r);
-  const type = pickEnemyType(wave);
+  const type = forceType || pickEnemyType(wave);
   const cfg  = ENEMY_TYPES[type];
 
   const baseHp    = Math.round(26 * Math.pow(1.22, wave - 1));
@@ -944,6 +947,7 @@ function startWave() {
   state.waveInProgress = true;
   state.toSpawn = 6 + 3 * state.wave;
   state.spawnTimer = 0;
+  state.bossSpawned = false;
   toast("Wave " + state.wave + " incoming");
   syncHud();
 }
@@ -957,7 +961,14 @@ function updateWave(dt) {
       state.toSpawn -= 1;
       state.spawnTimer = SPAWN_STAGGER;
     }
-  } else if (enemies.length === 0) {
+  }
+  // A boss appears at the tail of every 5th wave.
+  if (state.toSpawn === 0 && !state.bossSpawned && state.wave % 5 === 0) {
+    spawnEnemy("boss");
+    state.bossSpawned = true;
+    toast("BOSS incoming! Wave " + state.wave, true);
+  }
+  if (state.toSpawn === 0 && enemies.length === 0) {
     state.waveInProgress = false;
     const bonus = 20 + state.wave * 5;
     state.gold += bonus;
@@ -1261,11 +1272,34 @@ function drawEnemy(e) {
     ctx.stroke();
     ctx.restore();
   }
+  // Boss visual: outer ring + crown
+  if (e.type === "boss") {
+    ctx.save();
+    ctx.strokeStyle = "#9d4edd";
+    ctx.lineWidth = 3;
+    ctx.globalAlpha = 0.7;
+    ctx.beginPath();
+    ctx.arc(e.x, e.y, e.radius + 3, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+    ctx.fillStyle = "#ffd166";
+    const cx = e.x, cy = e.y - e.radius - 5;
+    ctx.beginPath();
+    ctx.moveTo(cx - 7, cy);
+    ctx.lineTo(cx - 7, cy - 7);
+    ctx.lineTo(cx - 3.5, cy - 3);
+    ctx.lineTo(cx, cy - 9);
+    ctx.lineTo(cx + 3.5, cy - 3);
+    ctx.lineTo(cx + 7, cy - 7);
+    ctx.lineTo(cx + 7, cy);
+    ctx.closePath();
+    ctx.fill();
+  }
   // Health bar
-  const barW = 20;
-  const barH = 4;
+  const barW = e.type === "boss" ? 36 : 20;
+  const barH = e.type === "boss" ? 5 : 4;
   const bx = e.x - barW / 2;
-  const by = e.y - e.radius - 9;
+  const by = e.y - e.radius - (e.type === "boss" ? 20 : 9);
   ctx.fillStyle = "rgba(0,0,0,0.55)";
   ctx.fillRect(bx - 1, by - 1, barW + 2, barH + 2);
   ctx.fillStyle = "#06d6a0";
@@ -1471,6 +1505,7 @@ function resetGame() {
   state.selected = null;
   state.kills = 0;
   state.totalGoldEarned = 0;
+  state.bossSpawned = false;
   btnPause.textContent = "Pause";
   btnPause.classList.remove("fast");
   elPauseBadge.classList.add("hidden");

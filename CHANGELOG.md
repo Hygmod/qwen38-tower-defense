@@ -94,6 +94,14 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
   button + swatch, key 3, and a legend note. Verified in Node against the
   extracted functions: cluster kill, far-enemy ignored, gun single-target
   regression, full/half falloff, and no explosion on a miss -- all pass.
+- Added a Boss enemy that appears at the tail of every 5th wave (5, 10, 15…):
+  very slow (0.4x), very tanky (8x HP), large radius (18px), purple with a
+  golden crown and wider HP bar. It rewards 5x gold on kill, incentivising the
+  player to concentrate fire or slow it. spawnEnemy() now accepts an optional
+  forceType parameter; updateWave() spawns the boss once per qualifying wave
+  (state.bossSpawned flag, reset in startWave and resetGame). The boss
+  integrates with all existing systems (targeting, frost slow, cannon splash,
+  trap/dissolve, leak). Legend updated with boss entry and counterplay hint.
 
 ## Known issues
 
