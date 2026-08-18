@@ -274,6 +274,7 @@
         <button class="ghost" id="btn-speed">Speed: 1x</button>
         <button class="ghost" id="btn-pause">Pause</button>
       </div>
+      <button class="ghost" id="btn-sound">Sound: On</button>
     </div>
 
     <div class="hint" style="margin-top:2px;">
@@ -291,7 +292,7 @@
       live pathfinding around your towers. A placement that would seal the
       maze is rejected. Keys: <kbd>1</kbd> gun, <kbd>2</kbd> frost, <kbd>3</kbd> cannon,
       <kbd>U</kbd> upgrade, <kbd>S</kbd> sell, <kbd>Space</kbd> start wave,
-      <kbd>P</kbd> pause.
+      <kbd>P</kbd> pause, <kbd>M</kbd> sound.
     </div>
   </aside>
 </div>
@@ -372,6 +373,122 @@ const SELL_RATIO = 0.7;    // refund 70% of everything invested
 const START_GOLD = 200;
 const START_LIVES = 20;
 const SPAWN_STAGGER = 0.75; // seconds between enemy spawns in a wave
+
+/* ============================== Sound ================================ */
+/* All audio is synthesized live with the Web Audio API — no files, no
+   dependencies. The AudioContext is created lazily on the first user
+   gesture (browsers block audio before any interaction); every event that
+   could create it (build, wave start, mute toggle, …) is itself a user
+   action, so the autoplay policy is never fought. A per-frame emission
+   budget keeps dense moments (a swarm crossing a tower wall) from
+   flooding the mixer. Mute state persists in localStorage. */
+
+const Sound = (() => {
+  let actx = null;
+  let noiseBuf = null;
+  let muted = localStorage.getItem("td-sound") === "0";
+  let frameBudget = 12;
+
+  function ensure() {
+    if (muted) return null;
+    if (!actx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      try { actx = new AC(); } catch (e) { return null; }
+    }
+    if (actx.state === "suspended") actx.resume();
+    return actx;
+  }
+
+  function tone(opts) {
+    const c = ensure();
+    if (!c || frameBudget <= 0) return;
+    frameBudget -= 1;
+    const { freq = 440, end = 0, type = "sine", dur = 0.08, vol = 0.12, delay = 0 } = opts;
+    const t0 = c.currentTime + delay;
+    const osc = c.createOscillator();
+    const g = c.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(Math.max(30, freq), t0);
+    if (end > 0) osc.frequency.exponentialRampToValueAtTime(Math.max(30, end), t0 + dur);
+    g.gain.setValueAtTime(vol, t0);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    osc.connect(g);
+    g.connect(c.destination);
+    osc.start(t0);
+    osc.stop(t0 + dur + 0.03);
+  }
+
+  /* Low-passed white-noise burst for the cannon blast. */
+  function blast() {
+    const c = ensure();
+    if (!c || frameBudget <= 0) return;
+    frameBudget -= 1;
+    if (!noiseBuf) {
+      noiseBuf = c.createBuffer(1, Math.floor(c.sampleRate * 0.3), c.sampleRate);
+      const d = noiseBuf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    }
+    const src = c.createBufferSource();
+    src.buffer = noiseBuf;
+    const f = c.createBiquadFilter();
+    f.type = "lowpass";
+    f.frequency.value = 850;
+    const g = c.createGain();
+    const t0 = c.currentTime;
+    g.gain.setValueAtTime(0.22, t0);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.22);
+    src.connect(f);
+    f.connect(g);
+    g.connect(c.destination);
+    src.start(t0);
+    src.stop(t0 + 0.3);
+  }
+
+  return {
+    muted: () => muted,
+    setMuted(m) {
+      muted = m;
+      localStorage.setItem("td-sound", m ? "0" : "1");
+      if (!m) ensure(); // user gesture: unlock audio now
+    },
+    /* Reset the per-frame emission budget; called at the top of update(). */
+    beginFrame() { frameBudget = 12; },
+    shoot(kind) {
+      if (kind === "gun") tone({ freq: 900, end: 500, type: "triangle", dur: 0.05, vol: 0.05 });
+      else if (kind === "frost") tone({ freq: 520, end: 840, type: "sine", dur: 0.07, vol: 0.05 });
+      else tone({ freq: 190, end: 70, type: "square", dur: 0.1, vol: 0.07 });
+    },
+    boom() { blast(); },
+    kill() { tone({ freq: 620, end: 180, type: "triangle", dur: 0.09, vol: 0.08 }); },
+    leak() {
+      tone({ freq: 340, end: 120, type: "sawtooth", dur: 0.22, vol: 0.1 });
+      tone({ freq: 170, end: 70, type: "sawtooth", dur: 0.26, vol: 0.1, delay: 0.12 });
+    },
+    dissolve() { tone({ freq: 240, end: 80, type: "sine", dur: 0.3, vol: 0.07 }); },
+    build() { tone({ freq: 392, end: 660, type: "triangle", dur: 0.08, vol: 0.09 }); },
+    upgrade() {
+      tone({ freq: 440, type: "triangle", dur: 0.06, vol: 0.08 });
+      tone({ freq: 554, type: "triangle", dur: 0.06, vol: 0.08, delay: 0.07 });
+      tone({ freq: 659, type: "triangle", dur: 0.09, vol: 0.08, delay: 0.14 });
+    },
+    sell() { tone({ freq: 500, end: 250, type: "sine", dur: 0.12, vol: 0.08 }); },
+    waveStart() { tone({ freq: 440, end: 880, type: "triangle", dur: 0.16, vol: 0.1 }); },
+    waveClear() {
+      tone({ freq: 523, type: "triangle", dur: 0.09, vol: 0.1 });
+      tone({ freq: 784, type: "triangle", dur: 0.14, vol: 0.1, delay: 0.09 });
+    },
+    boss() {
+      tone({ freq: 98, end: 49, type: "sawtooth", dur: 0.5, vol: 0.12 });
+      tone({ freq: 196, end: 98, type: "sawtooth", dur: 0.5, vol: 0.08, delay: 0.05 });
+    },
+    gameOver() {
+      tone({ freq: 392, type: "triangle", dur: 0.18, vol: 0.1 });
+      tone({ freq: 311, type: "triangle", dur: 0.18, vol: 0.1, delay: 0.2 });
+      tone({ freq: 233, type: "triangle", dur: 0.4, vol: 0.1, delay: 0.4 });
+    }
+  };
+})();
 
 /* ============================== State ================================= */
 
@@ -572,6 +689,7 @@ function buildTower(c, r) {
   const center = cellCenter(c, r);
   t.x = center.x;
   t.y = center.y;
+  Sound.build();
   // Maze changed: refresh the shared route and re-path every walker.
   recomputeRoute();
   repathAllEnemies();
@@ -586,6 +704,7 @@ function sellTower(t) {
   if (state.selected === t) state.selected = null;
   recomputeRoute();
   repathAllEnemies();
+  Sound.sell();
   toast("Sold for " + refund + " gold");
   syncHud();
 }
@@ -607,6 +726,7 @@ function upgradeTower(t) {
   t.damage = Math.round(t.damage * 1.35 + 1);
   t.range = t.range + 0.35;
   t.pulse = 0.35;
+  Sound.upgrade();
   syncHud();
 }
 
@@ -679,6 +799,7 @@ function updateEnemy(e, dt) {
     e.vy = 0;
     if (e.trappedTimer >= TRAP_GRACE) {
       e.dead = true; // no gold
+      Sound.dissolve();
       toast("Trapped enemy dissolved");
     }
     return;
@@ -719,6 +840,7 @@ function updateEnemy(e, dt) {
     // The route always ends at the exit, so walking it out means a leak.
     e.leaked = true;
     state.lives -= 1;
+    Sound.leak();
     if (state.lives <= 0) {
       state.lives = 0;
       state.gameOver = true;
@@ -753,6 +875,7 @@ function damageEnemy(e, dmg, slows) {
   if (slows) e.slowTimer = SLOW_DURATION; // refreshed, never stacked
   if (e.hp <= 0) {
     e.dead = true;
+    Sound.kill();
     state.gold += e.reward;
     state.kills += 1;
     state.totalGoldEarned += e.reward;
@@ -868,6 +991,7 @@ function updateTower(t, dt) {
     splash: TOWER_TYPES[t.type].splash || 0,
     life: 1.6
   });
+  Sound.shoot(t.type);
 }
 
 /* Nearest approach of point P to the segment A->B. Returns { t, d2 }: t is
@@ -924,6 +1048,7 @@ function updateProjectiles(dt) {
           }
         }
         explosions.push({ x: ix, y: iy, r: 4, maxR: R, life: 0.35 });
+        Sound.boom();
       } else {
         damageEnemy(hitE, p.damage, p.slows);
       }
@@ -949,6 +1074,7 @@ function startWave() {
   state.spawnTimer = 0;
   state.bossSpawned = false;
   toast("Wave " + state.wave + " incoming");
+  Sound.waveStart();
   syncHud();
 }
 
@@ -966,6 +1092,7 @@ function updateWave(dt) {
   if (state.toSpawn === 0 && !state.bossSpawned && state.wave % 5 === 0) {
     spawnEnemy("boss");
     state.bossSpawned = true;
+    Sound.boss();
     toast("BOSS incoming! Wave " + state.wave, true);
   }
   if (state.toSpawn === 0 && enemies.length === 0) {
@@ -974,6 +1101,7 @@ function updateWave(dt) {
     state.gold += bonus;
     state.totalGoldEarned += bonus;
     toast("Wave cleared! +" + bonus + " gold");
+    Sound.waveClear();
     syncHud();
   }
 }
@@ -981,6 +1109,7 @@ function updateWave(dt) {
 /* ============================== Update ================================ */
 
 function update(dt) {
+  Sound.beginFrame();
   if (state.gameOver) return;
   updateWave(dt);
   for (const e of enemies) updateEnemy(e, dt);
@@ -1324,6 +1453,7 @@ const elSelCosts = document.getElementById("sel-costs");
 const btnWave = document.getElementById("btn-wave");
 const btnSpeed = document.getElementById("btn-speed");
 const btnPause = document.getElementById("btn-pause");
+const btnSound = document.getElementById("btn-sound");
 const elPauseBadge = document.getElementById("pause-badge");
 const btnUpgrade = document.getElementById("btn-upgrade");
 const btnSell = document.getElementById("btn-sell");
@@ -1421,6 +1551,15 @@ function togglePause() {
 }
 btnPause.addEventListener("click", togglePause);
 
+function syncSoundBtn() {
+  btnSound.textContent = "Sound: " + (Sound.muted() ? "Off" : "On");
+  btnSound.classList.toggle("fast", !Sound.muted());
+}
+btnSound.addEventListener("click", () => {
+  Sound.setMuted(!Sound.muted());
+  syncSoundBtn();
+});
+
 btnUpgrade.addEventListener("click", () => upgradeTower(state.selected));
 btnSell.addEventListener("click", () => sellTower(state.selected));
 
@@ -1437,6 +1576,9 @@ document.addEventListener("keydown", (ev) => {
     startWave();
   } else if (ev.key === "p" || ev.key === "P") {
     togglePause();
+  } else if (ev.key === "m" || ev.key === "M") {
+    Sound.setMuted(!Sound.muted());
+    syncSoundBtn();
   } else if (ev.key === "Escape") {
     state.selected = null;
     syncHud();
@@ -1478,6 +1620,7 @@ canvas.addEventListener("click", (ev) => {
 /* ============================== Game over / reset ===================== */
 
 function showGameOver() {
+  Sound.gameOver();
   if (state.wave > bestWave) {
     bestWave = state.wave;
     localStorage.setItem("td-best-wave", String(bestWave));
@@ -1544,6 +1687,7 @@ function frame(ts) {
 makeTowerGrid();
 recomputeRoute();
 syncHud();
+syncSoundBtn();
 requestAnimationFrame(frame);
 
 })();

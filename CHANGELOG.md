@@ -102,6 +102,17 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
   (state.bossSpawned flag, reset in startWave and resetGame). The boss
   integrates with all existing systems (targeting, frost slow, cannon splash,
   trap/dissolve, leak). Legend updated with boss entry and counterplay hint.
+- Added synthesized sound effects via the Web Audio API (no files, no deps):
+  per-tower shots, cannon blast (low-passed noise burst), kill, leak alarm,
+  trapped-dissolve, build/upgrade/sell, wave start/clear, boss fanfare, game
+  over sting. The AudioContext is created lazily on the first user gesture so
+  autoplay policy is never fought, a 12-sound/frame budget (reset in
+  Sound.beginFrame() at the top of update()) caps dense moments, and the
+  mute toggle (new ghost button + `M` hotkey, persisted in localStorage as
+  td-sound) silences everything and is honored at boot. Verified in Node
+  against the extracted module with a fake Web Audio API: 15 cases pass
+  (node graph, resume-from-suspended, budget cap, noise-buffer caching,
+  arpeggio, mute on/off/persistence, persisted-mute boot).
 
 ## Known issues
 
