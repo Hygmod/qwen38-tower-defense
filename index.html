@@ -230,6 +230,14 @@
       <button class="ghost" id="btn-speed">Speed: 1x</button>
     </div>
 
+    <div class="hint" style="margin-top:2px;">
+      <b style="color:var(--muted);font-size:10px;letter-spacing:1px;text-transform:uppercase;">Enemy types</b><br>
+      <span style="color:#ef476f;">●</span> Normal &nbsp;
+      <span style="color:#f78fb3;">●</span> Scout (fast · wave 3+) &nbsp;
+      <span style="color:#c9184a;">●</span> Brute (tough · wave 5+)<br>
+      Scouts outrun slow towers – frost or high fire-rate helps.
+      Brutes soak up damage – concentrate fire or box them in.
+    </div>
     <div class="hint">
       Enemies route from the green gate (left) to the amber gate (right) via
       live pathfinding around your towers. A placement that would seal the
@@ -537,19 +545,45 @@ function upgradeTower(t) {
 
 /* ============================== Enemies =============================== */
 
+/* Enemy types introduce tactical variety:
+   normal – baseline stats
+   scout  – fast & fragile (from wave 3)
+   brute  – slow & tanky   (from wave 5) */
+const ENEMY_TYPES = {
+  normal: { hpMul: 1.0,  spdMul: 1.0,  radius: 9,  color: "#ef476f", rewardMul: 1.0  },
+  scout:  { hpMul: 0.45, spdMul: 1.7,  radius: 7,  color: "#f78fb3", rewardMul: 0.8  },
+  brute:  { hpMul: 2.8,  spdMul: 0.55, radius: 13, color: "#c9184a", rewardMul: 1.6  }
+};
+
+function pickEnemyType(wave) {
+  const r = Math.random();
+  if (wave >= 5 && r < 0.20) return "brute";
+  if (wave >= 3 && r < 0.55) return "scout";
+  return "normal";
+}
+
 function spawnEnemy() {
   const wave = state.wave;
   const start = cellCenter(ENTRY.c, ENTRY.r);
+  const type = pickEnemyType(wave);
+  const cfg  = ENEMY_TYPES[type];
+
+  const baseHp    = Math.round(26 * Math.pow(1.22, wave - 1));
+  const baseSpeed = Math.min(130, 55 + wave * 3);
+  const hp        = Math.max(8, Math.round(baseHp * cfg.hpMul));
+
   const e = {
     x: start.x,
     y: start.y,
     vx: 0,
     vy: 0,
-    radius: 9,
-    hp: Math.round(26 * Math.pow(1.22, wave - 1)),
-    maxHp: 0,
-    baseSpeed: Math.min(130, 55 + wave * 3),
-    reward: 5 + wave,
+    radius: cfg.radius,
+    hp,
+    maxHp: hp,
+    baseSpeed: baseSpeed * cfg.spdMul,
+    reward: Math.max(3, Math.round((5 + wave) * cfg.rewardMul)),
+    color: cfg.color,
+    type,
     slowTimer: 0,
     trappedTimer: 0,
     route: [],
@@ -557,7 +591,6 @@ function spawnEnemy() {
     dead: false,
     leaked: false
   };
-  e.maxHp = e.hp;
   const p = findPath(towerGrid, ENTRY, EXIT);
   e.route = p || [];
   e.routeIndex = 1;
@@ -1049,7 +1082,7 @@ function drawTower(t) {
 function drawEnemy(e) {
   const slowed = e.slowTimer > 0;
   // Body
-  ctx.fillStyle = "#ef476f";
+  ctx.fillStyle = e.color;
   ctx.beginPath();
   ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
   ctx.fill();

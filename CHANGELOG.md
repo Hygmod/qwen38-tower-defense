@@ -43,6 +43,13 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
   path so a shot crossing two enemies hits the nearer one. Verified in Node:
   tunnel hit, no off-path false positive, earliest-of-two, short-step
   regression, frost slow, start-overlap, out-of-bounds.
+- Added enemy variety: three types (normal, scout, brute) with distinct
+  speed/HP/size/color/reward. Scouts (fast, fragile) appear from wave 3;
+  brutes (slow, tanky) from wave 5. spawnEnemy() picks a type via
+  pickEnemyType() using per-type multipliers from an ENEMY_TYPES config.
+  drawEnemy() now reads e.color instead of a hard-coded pink. A legend in the
+  side panel explains each type and hints at counterplay (frost for scouts,
+  concentrated fire for brutes).
 
 ## Known issues
 
