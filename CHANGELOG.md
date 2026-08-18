@@ -57,6 +57,16 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
   paused works and takes effect on resume. A "Paused" badge shows over the
   canvas; the button is disabled at game over and its state/UI reset cleanly
   on Play Again.
+- Fixed a targeting bug that fully broke the "box them in" kill strategy:
+  a boxed-in (trapped) enemy reports progress -1, but acquireTarget() started
+  its best-so-far at -1 with a strict > compare, so -1 > -1 was always false
+  and no tower ever fired on a trapped enemy even when it was the only one in
+  range -- it just sat and dissolved for no gold after the TRAP_GRACE timer.
+  acquireTarget() now seeds best-so-far at -Infinity, so a lone boxed-in enemy
+  is targetable (as the Done notes intended) while every real enemy (progress
+  >= 0) still strictly outranks it. Verified in Node against the extracted
+  functions: boxed-alone now shoots, real-alone and both (either order) still
+  pick the real enemy, empty stays null.
 
 ## Known issues
 

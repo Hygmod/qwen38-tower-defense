@@ -747,7 +747,14 @@ function predictIntercept(target, speed, sx, sy) {
 function acquireTarget(t) {
   const rangePx = t.range * CELL;
   let best = null;
-  let bestProg = -1;
+  // -Infinity, not -1: a boxed-in enemy reports progress -1, so starting the
+  // comparison at -1 (with the strict > below) would make it lose its own
+  // "shootable when alone" tie and no tower would ever fire on it -- which
+  // broke the "box them in" kill strategy (the trapped enemy would just sit
+  // and dissolve for no gold). -Infinity keeps every real enemy (progress >=
+  // 0) strictly ahead of a boxed-in one while still letting a lone boxed-in
+  // enemy be targeted.
+  let bestProg = -Infinity;
   for (const e of enemies) {
     if (e.dead || e.leaked) continue;
     const dx = e.x - t.x;
