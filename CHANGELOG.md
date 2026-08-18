@@ -18,6 +18,15 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
   while real enemies leaked; it now ranks lowest (still shootable alone).
 - Added a live "Enemies remaining" counter in the side panel showing alive and
   yet-to-spawn enemies during an active wave.
+- Hover build preview now draws the re-routed enemy path (dashed amber line)
+  that the maze WOULD have if the tower were committed there; canPlace() now
+  returns the candidate-grid path it already computed, so the preview is free.
+- Fixed a targeting tie: boxed-in enemies ranked progress 0, equal to a
+  just-spawned enemy, so array order let the stale frozen enemy keep stealing
+  shots; enemyProgress now returns -1 so real enemies always outrank it.
+- Verified the suspected economy bug from Known issues is not a bug:
+  buildTower() runs canPlace() (sealing check, no mutation) before any gold
+  deduction, so rejected placements never charge the player.
 
 ## Known issues
 
@@ -31,6 +40,5 @@ well enough that the next developer can act on it without rediscovering it.
 - Nothing here has been verified in a running browser -- there is no browser in
   this environment and the static gate only checks that the code has the right
   SHAPE. Any behaviour may still be wrong, including things listed under Done.
-- Possible economy bug, unverified: gold may be deducted before the sealing
-  check rejects a tower placement, so a rejected build could still charge the
-  player. Worth tracing the order of operations in the placement path.
+  (The pure logic -- pathfinding, placement validation, sealing rejection --
+  has been exercised in Node against the extracted functions.)

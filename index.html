@@ -448,10 +448,11 @@ function enemyInCell(c, r) {
   return false;
 }
 
-/* Validate a build before committing it. Returns { ok, reason }.
-   The candidate grid is a full copy of the live grid with the proposed
-   tower in it; the real grid is only touched by buildTower(), which is
-   only called when this returns ok. */
+/* Validate a build before committing it. Returns { ok, reason, path }:
+   path is the entry->exit route the maze WOULD have with this tower in it
+   (used by the hover preview). The candidate grid is a full copy of the
+   live grid with the proposed tower in it; the real grid is only touched
+   by buildTower(), which is only called when this returns ok. */
 function canPlace(c, r) {
   if (c < 0 || c >= COLS || r < 0 || r >= ROWS) return { ok: false, reason: "Out of bounds" };
   if (c === ENTRY.c && r === ENTRY.r) return { ok: false, reason: "Cannot build on the entry gate" };
@@ -463,7 +464,7 @@ function canPlace(c, r) {
   candidate[r][c] = { candidate: true };
   const p = findPath(candidate, ENTRY, EXIT);
   if (!p) return { ok: false, reason: "That would seal the path" };
-  return { ok: true };
+  return { ok: true, path: p };
 }
 
 function buildTower(c, r) {
@@ -611,10 +612,12 @@ function enemyProgress(e) {
   // A boxed-in enemy (trapped in a pocket sealed off from the exit) has an
   // empty route: it will NEVER reach the exit, so it must rank lowest, not
   // highest — otherwise every tower in range pours its DPS into a frozen
-  // target while real enemies march to the gate. 0 keeps it shootable when
-  // it is the only enemy in range (still clears the wave) but always below
-  // any enemy actually advancing (whose progress grows from ~0 upward).
-  if (e.routeIndex >= e.route.length) return 0;
+  // target while real enemies march to the gate. -1 keeps it shootable when
+  // it is the only enemy in range (still clears the wave) but strictly below
+  // every enemy actually advancing, including one that has only just
+  // spawned at progress 0 (with 0, the tie was won by array order, so a
+  // stale boxed-in enemy kept stealing shots from fresh spawns).
+  if (e.routeIndex >= e.route.length) return -1;
   let prog = e.routeIndex;
   if (e.routeIndex > 0) {
     const wp = e.route[e.routeIndex];
@@ -909,6 +912,23 @@ function render() {
       const ok = check.ok && affordable;
       const tint = ok ? type.color : "#ef476f";
       drawRangeCircle(center.x, center.y, type.range, tint, ok ? 0.07 : 0.05);
+      if (ok && check.path) {
+        // Show the route the enemies WOULD take if this tower were built
+        // here, so the player can see the re-routing before committing.
+        ctx.save();
+        ctx.strokeStyle = "#ffd166";
+        ctx.lineWidth = 2;
+        ctx.globalAlpha = 0.75;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        check.path.forEach((cell, i) => {
+          const p = cellCenter(cell.c, cell.r);
+          if (i === 0) ctx.moveTo(p.x, p.y);
+          else ctx.lineTo(p.x, p.y);
+        });
+        ctx.stroke();
+        ctx.restore();
+      }
       ctx.save();
       ctx.globalAlpha = 0.55;
       drawTowerBody(center.x, center.y, type.color, 0, 1, ok);
