@@ -9,3 +9,6 @@ you do not repeat work that is already done.
 - Status: the static gate passes, but nothing has been verified in a running
   browser, so any behaviour may still be wrong. Prefer fixing what already
   exists over adding new features.
+- Fixed live re-pathing soft-lock: enemies in transit that floor-mapped onto a
+  just-blocked cell were permanently frozen (wave could never clear); they now
+  re-path from the nearest adjacent cell that still reaches the exit.

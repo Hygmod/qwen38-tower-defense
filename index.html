@@ -391,23 +391,49 @@ function recomputeRoute() {
   routeKeys = new Set(route.map((p) => cellKey(p.c, p.r)));
 }
 
-/* Re-route every enemy from wherever it stands right now. Called whenever
-   the maze changes (tower placed or sold) so nobody keeps following a
-   stale route through a freshly occupied cell. */
-function repathAllEnemies() {
-  for (const e of enemies) {
-    const here = pixelToCell(e.x, e.y);
-    const p = findPath(towerGrid, { c: here.c, r: here.r }, EXIT);
+/* Re-route one enemy from wherever it stands right now. An enemy in
+   transit between cells may floor-map onto a cell a just-placed tower now
+   occupies; starting the BFS from that blocked cell would wrongly mark the
+   enemy "boxed in" forever. Instead, try the cell and its four neighbours
+   nearest-first and take the first one from which the exit is reachable,
+   so the enemy is only frozen when it genuinely has no way out. */
+function repathEnemy(e) {
+  const base = pixelToCell(e.x, e.y);
+  const candidates = [
+    { c: base.c, r: base.r },
+    { c: base.c - 1, r: base.r },
+    { c: base.c + 1, r: base.r },
+    { c: base.c, r: base.r - 1 },
+    { c: base.c, r: base.r + 1 }
+  ];
+  candidates.sort((a, b) => {
+    const ca = cellCenter(a.c, a.r);
+    const cb = cellCenter(b.c, b.r);
+    return ((ca.x - e.x) * (ca.x - e.x) + (ca.y - e.y) * (ca.y - e.y)) -
+           ((cb.x - e.x) * (cb.x - e.x) + (cb.y - e.y) * (cb.y - e.y));
+  });
+  for (const cand of candidates) {
+    if (cand.r < 0 || cand.r >= ROWS || cand.c < 0 || cand.c >= COLS) continue;
+    if (towerGrid[cand.r][cand.c] !== null) continue;
+    const p = findPath(towerGrid, cand, EXIT);
     if (p && p.length > 1) {
       e.route = p;
       e.routeIndex = 1; // p[0] is the cell the enemy already stands in
-    } else {
-      e.route = [];     // boxed in: it stops dead and sits there
-      e.routeIndex = 0;
-      e.vx = 0;
-      e.vy = 0;
+      return;
     }
   }
+  // Truly boxed in: it stops dead and sits there.
+  e.route = [];
+  e.routeIndex = 0;
+  e.vx = 0;
+  e.vy = 0;
+}
+
+/* Re-route every enemy. Called whenever the maze changes (tower placed or
+   sold) so nobody keeps following a stale route through a freshly occupied
+   cell. */
+function repathAllEnemies() {
+  for (const e of enemies) repathEnemy(e);
 }
 
 /* ============================== Placement ============================= */
