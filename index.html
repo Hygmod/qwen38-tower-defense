@@ -516,6 +516,7 @@ let towerGrid = [];      // [r][c] -> tower object or null
 let enemies = [];
 let projectiles = [];
 let explosions = [];     // short-lived visual rings from cannon blasts
+let floats = [];          // floating damage/gold text
 let route = [];          // current entry->exit route: array of { c, r }
 let routeKeys = new Set();
 let waveQueue = [];      // active wave: queue of enemy types still to spawn
@@ -886,7 +887,24 @@ function damageEnemy(e, dmg, slows) {
     state.gold += e.reward;
     state.kills += 1;
     state.totalGoldEarned += e.reward;
+    spawnFloat(e.x, e.y - e.radius - 6, "+" + e.reward + "g", "#ffd166", 1.0);
+  } else {
+    spawnFloat(e.x + (Math.random() * 10 - 5), e.y - e.radius - 4, String(dmg), "#ffffff", 0.55);
   }
+}
+
+/* Floating text: rises and fades. Capped so a cannon splash never floods. */
+function spawnFloat(x, y, text, color, life) {
+  if (floats.length > 36) floats.shift();
+  floats.push({ x, y, text, color, life, maxLife: life });
+}
+
+function updateFloats(dt) {
+  for (const f of floats) {
+    f.y -= 28 * dt;
+    f.life -= dt;
+  }
+  floats = floats.filter((f) => f.life > 0);
 }
 
 /* ============================== Towers ================================ */
@@ -1135,6 +1153,7 @@ function update(dt) {
   }
   updateProjectiles(dt);
   updateEffects(dt);
+  updateFloats(dt);
 }
 
 /* Cannon blast rings: expand toward maxR and fade out over life. Purely
@@ -1269,6 +1288,21 @@ function render() {
     ctx.beginPath();
     ctx.arc(ex.x, ex.y, ex.r, 0, Math.PI * 2);
     ctx.fill();
+    ctx.restore();
+  }
+
+  // Floating damage / gold text
+  for (const f of floats) {
+    const a = Math.max(0, f.life / f.maxLife);
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.font = "bold 11px ui-sans-serif, system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "rgba(0,0,0,0.55)";
+    ctx.fillText(f.text, f.x + 1, f.y + 1);
+    ctx.fillStyle = f.color;
+    ctx.fillText(f.text, f.x, f.y);
     ctx.restore();
   }
 
@@ -1688,6 +1722,7 @@ function resetGame() {
   enemies = [];
   projectiles = [];
   explosions = [];
+  floats = [];
   makeTowerGrid();
   recomputeRoute();
   elOverlay.classList.add("hidden");

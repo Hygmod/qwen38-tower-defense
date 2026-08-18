@@ -125,6 +125,12 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
   invariants (length, boss-at-tail, type eligibility) across 30 waves x 50
   rolls, and queue consumption over a full 60-wave run (no underflow, tail
   boss on all 12 fifth-waves).
+- Added floating damage numbers: white damage text rises and fades above each
+  enemy on hit; kills show an amber gold-reward float ("+Ng") that lingers
+  longer. A new `floats` array + spawnFloat()/updateFloats() (dt-scaled) +
+  canvas render pass (with a 1px shadow for readability) handle the effect;
+  capped at 36 active floats so cannon splash never floods. Verified in Node:
+  spawn/decay timing and cap bound.
 
 ## Known issues
 
