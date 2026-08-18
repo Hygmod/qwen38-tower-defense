@@ -75,6 +75,10 @@
   .overlay.hidden { display: none; }
   .overlay h2 { font-size: 30px; letter-spacing: 1px; }
   .overlay p { color: var(--muted); font-size: 14px; }
+  .overlay-stats { display: flex; gap: 14px; margin-top: 6px; }
+  .overlay-stats .ost { text-align: center; background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 16px; min-width: 72px; }
+  .overlay-stats .ost .ov { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .overlay-stats .ost .ol { font-size: 10px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--muted); margin-top: 2px; }
   .panel {
     width: 262px;
     background: linear-gradient(180deg, var(--panel) 0%, #12121a 100%);
@@ -206,6 +210,7 @@
     <div id="overlay" class="overlay hidden">
       <h2 id="overlay-title">Game Over</h2>
       <p id="overlay-sub">The horde broke through.</p>
+      <div id="overlay-stats"></div>
       <button id="btn-restart" class="primary">Play Again</button>
     </div>
   </div>
@@ -363,8 +368,11 @@ const state = {
   paused: false,   // freezes update() but keeps rendering so you can plan builds
   buildType: "gun",
   selected: null,  // the tower object the player has selected
-  hover: null      // { c, r } cell under the mouse, or null
+  hover: null,     // { c, r } cell under the mouse, or null
+  kills: 0,
+  totalGoldEarned: 0
 };
+let bestWave = parseInt(localStorage.getItem("td-best-wave") || "0", 10);
 
 let towerGrid = [];      // [r][c] -> tower object or null
 let enemies = [];
@@ -724,6 +732,8 @@ function damageEnemy(e, dmg, slows) {
   if (e.hp <= 0) {
     e.dead = true;
     state.gold += e.reward;
+    state.kills += 1;
+    state.totalGoldEarned += e.reward;
   }
 }
 
@@ -914,6 +924,7 @@ function updateWave(dt) {
     state.waveInProgress = false;
     const bonus = 20 + state.wave * 5;
     state.gold += bonus;
+    state.totalGoldEarned += bonus;
     toast("Wave cleared! +" + bonus + " gold");
     syncHud();
   }
@@ -1366,10 +1377,19 @@ canvas.addEventListener("click", (ev) => {
 /* ============================== Game over / reset ===================== */
 
 function showGameOver() {
+  if (state.wave > bestWave) {
+    bestWave = state.wave;
+    localStorage.setItem("td-best-wave", String(bestWave));
+  }
   elOverlay.classList.remove("hidden");
   document.getElementById("overlay-title").textContent = "Game Over";
   document.getElementById("overlay-sub").textContent =
     "The horde broke through on wave " + state.wave + ".";
+  document.getElementById("overlay-stats").innerHTML =
+    '<div class="ost"><div class="ov">' + state.wave + '</div><div class="ol">Wave</div></div>' +
+    '<div class="ost"><div class="ov">' + state.kills + '</div><div class="ol">Kills</div></div>' +
+    '<div class="ost"><div class="ov">' + state.totalGoldEarned + '</div><div class="ol">Gold</div></div>' +
+    '<div class="ost"><div class="ov" style="color:var(--amber)">' + bestWave + '</div><div class="ol">Best</div></div>';
 }
 
 function resetGame() {
@@ -1382,6 +1402,8 @@ function resetGame() {
   state.gameOver = false;
   state.paused = false;
   state.selected = null;
+  state.kills = 0;
+  state.totalGoldEarned = 0;
   btnPause.textContent = "Pause";
   btnPause.classList.remove("fast");
   elPauseBadge.classList.add("hidden");

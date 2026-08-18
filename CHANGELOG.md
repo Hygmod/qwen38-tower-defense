@@ -77,6 +77,10 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
   Verified in Node against the extracted acquireTarget: 14 cases (each mode,
   default, boxed-alone, real-outranks-boxed, out-of-range ignore, tie-break,
   dead/leaked-skip) all pass.
+- Added game-over statistics: the overlay now shows Wave reached, total Kills,
+  total Gold earned (kills + wave bonuses), and Best wave (persisted in
+  localStorage). state.kills and state.totalGoldEarned are incremented in
+  damageEnemy() and updateWave() respectively, and reset on Play Again.
 
 ## Known issues
 
