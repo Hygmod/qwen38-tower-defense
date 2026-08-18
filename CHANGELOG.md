@@ -81,6 +81,19 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
   total Gold earned (kills + wave bonuses), and Best wave (persisted in
   localStorage). state.kills and state.totalGoldEarned are incremented in
   damageEnemy() and updateWave() respectively, and reset on Play Again.
+- Added a third tower, the Cannon (hotkey 3, 100g, orange #ff8c42): slow
+  single projectile that detonates at its first contact point and deals area
+  damage to every enemy within a 1.3-cell radius with linear falloff (full at
+  centre, 50% at the edge). It fills the anti-swarm gap left by the two
+  single-target towers now that waves scale in count. Implemented by adding a
+  `splash` field to projectiles and branching in updateProjectiles() -- the
+  detonation point is the earliest swept-segment contact (reusing the existing
+  hit test, so it stays tunnel-proof), and a `explosions` ring effect (updated
+  in a new updateEffects(), dt-scaled like everything else) marks each blast.
+  Gun/frost are unaffected (splash 0 keeps the single-target path). New build
+  button + swatch, key 3, and a legend note. Verified in Node against the
+  extracted functions: cluster kill, far-enemy ignored, gun single-target
+  regression, full/half falloff, and no explosion on a miss -- all pass.
 
 ## Known issues
 
