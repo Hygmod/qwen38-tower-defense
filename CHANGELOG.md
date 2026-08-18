@@ -165,4 +165,15 @@ Each item is one bullet. Keep it short -- a sentence or two saying what is
 wrong or what is missing, and enough detail that the next developer can start
 without rediscovering it. No IDs, no status fields, no priorities.
 
+- `routeKeys` is dead code: it is declared and rebuilt in `recomputeRoute()` but never read anywhere (the path tiles render straight from `route`). Delete it, or wire it to something that actually needs the cell-key set.
+- `resetGame()` (Play Again) resets the Pause state and button but not `state.speed` / the Speed button, so a 2x session carries the multiplier into the next game — inconsistent with the other control-state resets in the same function.
+- `resetGame()` doesn't clear `state.hover`, so the build preview (range circle, dashed re-route line, and tower ghost) lingers over the fresh maze until the mouse happens to move again.
+- The Selected Tower panel shows the upgrade cost but not what the upgrade does; add a before→after preview (e.g. "Damage 12 → 17, Range 3.4 → 3.7") so the escalating upgrade cost is an informed choice instead of a guess.
+- Every wave needs a manual Start Wave click. An optional "auto-start next wave" toggle (short delay after a clear) is a common TD convenience that lets the player keep building between waves.
+- The layout isn't responsive: `.app` is a fixed ~950px flex row with no wrap/scroll and `body` centers it, so on a narrow window the flexbox-centering overflow bug clips the left edge of the canvas with no way to scroll back to it.
+- Audio is all-or-nothing (mute only). There's no master volume — a master GainNode plus a slider would let players dial the synthesized SFX down without losing it entirely.
+- `pickEnemyType()` makes waves 3–4 roughly 55% scouts (fast, fragile), a sharp speed spike versus the surrounding waves; worth reviewing the type mix for a gentler early ramp.
+- All the strategy (frost vs scouts, Strong targeting for brutes, kill-boxing, interest banking) lives in dense hint text with no onboarding; a dismissible "how to play" overlay or Help button would make it readable on first load.
+- Enemy HP is shown only as a bar. For brutes and the boss (very high HP) there's no numeric value, so the player can't tell how much more damage is needed to take them down.
+
 When you finish an item, DELETE its bullet from here and add a line under Done.
