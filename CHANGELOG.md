@@ -484,6 +484,15 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
   false, 2.1 -> true, mixed far+near, boxed-in/dead/leaked no-trigger,
   render no-throw, and end-to-end the warning fires before the first leak in
   an undefended wave). Playtest 6/6 still passes.
+- Added per-tower aim lines: `updateTower()` now stores its pick on the tower
+  (`t.target = target`, null when none) instead of discarding it, so the player
+  can see why a tower shot a given enemy under First/Strong/Close modes. A new
+  render pass (after towers, before enemies, so lines tuck under their target)
+  draws a faint 0.16-alpha line in the tower's own color from tower to
+  `t.target` whenever the target is still alive and not leaked; the target
+  persists across cooldowns (updateTower's early return leaves it set) and the
+  dead/leaked guard covers enemies killed mid-frame before the next acquire.
+  Playtest 6/6 still passes.
 
 ## Backlog
 
@@ -494,7 +503,6 @@ Each item is one bullet. Keep it short -- a sentence or two saying what is
 wrong or what is missing, and enough detail that the next developer can start
 without rediscovering it. No IDs, no status fields, no priorities.
 
-- Towers never show what they are aiming at: `updateTower()` computes a target each frame but discards it, so with multiple modes (First/Strong/Close) the player cannot see why a tower shot a given enemy. Store the pick on the tower (`t.target = target`, cleared when none) and in `render()` draw a faint line from tower to `t.target` when the target is still alive and not leaked — one line per firing tower is cheap at this tower count.
 - Targeting mode is per-tower with no bulk control: the boss toast says "concentrate your fire", but pointing every tower at Strong or Close for a boss wave means clicking each tower and its mode row one at a time. Add a small "All" control to the `#sel-modes` row that sets `t.mode = mode` on every tower in `allTowers()` (plus `Sound.ui()` and the existing `.on` class sync on `modeBtns`), so one click re-points the whole field.
 - `Sound.beginFrame()` is called at the top of `update()`, which is skipped while paused, so the per-frame sound budget keeps its last value: after a dense frame that spent all 12 emissions, a build/upgrade/sell while paused plays no sound at all. Move the `beginFrame()` call from `update()` to `frame()` (before the paused check) so every rendered frame gets a fresh budget regardless of pause.
 - A stale build preview can sit under the help card: `showHelp()` does not clear `state.hover`, and the card covers the canvas without firing `mouseleave`, so a hovering mouse leaves the range circle + dashed re-route line drawn on the visible canvas slivers behind the 540px card while the game is frozen. Clear `state.hover = null` in `showHelp()` (matching `resetGame()`, which already does this).

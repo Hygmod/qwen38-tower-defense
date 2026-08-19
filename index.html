@@ -1204,6 +1204,7 @@ function updateTower(t, dt) {
   if (t.cooldown > 0) return;
 
   const target = acquireTarget(t);
+  t.target = target; // aim line: what this tower is currently hunting (render() draws a faint line to it while it's alive)
   if (!target) return;
 
   const aim = predictIntercept(target, TOWER_TYPES[t.type].projectileSpeed, t.x, t.y);
@@ -1506,6 +1507,24 @@ function render() {
     for (let c = 0; c < COLS; c++) {
       const t = towerGrid[r][c];
       if (t) drawTower(t);
+    }
+  }
+
+  // Aim lines: faint tower -> current target, so the active targeting mode is visible
+  ctx.lineWidth = 1;
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const t = towerGrid[r][c];
+      if (t && t.target && !t.target.dead && !t.target.leaked) {
+        ctx.save();
+        ctx.globalAlpha = 0.16;
+        ctx.strokeStyle = TOWER_TYPES[t.type].color;
+        ctx.beginPath();
+        ctx.moveTo(t.x, t.y);
+        ctx.lineTo(t.target.x, t.target.y);
+        ctx.stroke();
+        ctx.restore();
+      }
     }
   }
 
