@@ -42,6 +42,7 @@
   .stage { position: relative; line-height: 0; }
   canvas {
     display: block;
+    touch-action: none; /* taps drive the game; don't let drags scroll the page */
     width: 640px; height: 480px;
     background: var(--ground);
     border: 1px solid var(--line);
@@ -1946,9 +1947,8 @@ canvas.addEventListener("mouseleave", () => {
   state.hover = null;
 });
 
-canvas.addEventListener("click", (ev) => {
+function tapCell(cell) {
   if (state.gameOver) return;
-  const cell = eventCell(ev);
   const existing = towerGrid[cell.r][cell.c];
   if (existing) {
     // Clicking a placed tower selects it (and shows its range).
@@ -1959,6 +1959,45 @@ canvas.addEventListener("click", (ev) => {
   state.selected = null;
   buildTower(cell.c, cell.r);
   syncHud();
+}
+
+canvas.addEventListener("click", (ev) => {
+  tapCell(eventCell(ev));
+});
+
+/* Touch: the same build-or-select path as click. The press position doubles
+   as the hover cell so the range/preview render while the finger is down;
+   a tap (small movement) commits, a drag only scrubs the preview.
+   preventDefault keeps the browser from scrolling/zooming and from
+   synthesising a second click on top of our own tap handling. */
+let touchDown = null;
+canvas.addEventListener("touchstart", (ev) => {
+  ev.preventDefault();
+  if (ev.touches.length !== 1) { touchDown = null; return; }
+  touchDown = { x: ev.touches[0].clientX, y: ev.touches[0].clientY };
+  state.hover = eventCell(ev.touches[0]);
+}, { passive: false });
+
+canvas.addEventListener("touchmove", (ev) => {
+  ev.preventDefault();
+  if (!touchDown) return;
+  const t = ev.touches[0];
+  if (!t) return;
+  const dx = t.clientX - touchDown.x, dy = t.clientY - touchDown.y;
+  if (dx * dx + dy * dy > 100) touchDown = null; // moved ~10px+: drag, not a tap
+  state.hover = eventCell(t);
+}, { passive: false });
+
+canvas.addEventListener("touchend", (ev) => {
+  ev.preventDefault();
+  if (touchDown && ev.changedTouches[0]) tapCell(eventCell(ev.changedTouches[0]));
+  touchDown = null;
+  state.hover = null; // finger lifted: drop the preview, like mouseleave
+});
+
+canvas.addEventListener("touchcancel", () => {
+  touchDown = null;
+  state.hover = null;
 });
 
 /* ============================== Game over / reset ===================== */

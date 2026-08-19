@@ -285,6 +285,20 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
   and calls syncAutostartBtn() (matching the syncSpeedBtn pattern), so a fresh
   game always starts with auto-start off. Playtest 6/6 still passes.
 
+- Added touch support: `touch-action: none` on the canvas stops drags from
+  scrolling the page, and touchstart/touchmove/touchend/touchcancel now feed
+  the same build-or-select path as click via a shared `tapCell()` (extracted
+  from the old click handler). The press position sets `state.hover` so the
+  build preview renders while the finger is down; a tap (movement under ~10px,
+  tracked in `touchDown`) commits, a longer drag only scrubs the preview,
+  and lift/cancel clears hover like mouseleave. `preventDefault` stops the
+  browser synthesising a second click on top of the tap. Two-finger touches
+  and taps after game over are no-ops; sealing rejections flow through the
+  same canPlace() branch as clicks. Verified in Node against the real script
+  with synthetic touch events: 19 cases pass (build, gold, select, preview,
+  drag-suppress, wobble-tap, cancel, two-finger, seal-reject, game-over).
+  Playtest 6/6 still passes.
+
 ## Backlog
 
 Work that is queued but not done: bugs worth fixing and improvements worth
@@ -294,7 +308,6 @@ Each item is one bullet. Keep it short -- a sentence or two saying what is
 wrong or what is missing, and enough detail that the next developer can start
 without rediscovering it. No IDs, no status fields, no priorities.
 
-- No touch support: canvas input is mouse-only (mousemove/mouseleave/click). Taps do fire click so building works, but there is no preview and the canvas has no `touch-action: none`, so dragging over it scrolls the page on mobile. Add `touch-action: none` and map tap/touchstart onto the same build-or-select path as click.
 - No mid-game restart: the only reset is the game-over "Play Again", so a botched early build can't be abandoned until all 20 lives are gone. Add a Restart ghost button in the controls section that calls `resetGame()`.
 - No way to cancel the active build type: once a tower is picked every empty-cell click builds, and Esc only clears a selected placed tower, so you can't switch to inspect-only. Make clicking the already-selected `.tower-btn` (or re-pressing its hotkey) set `state.buildType = null`, and have the canvas click build only when buildType is set and otherwise just select.
 - `bestWave` (persisted in localStorage) is only surfaced on the game-over screen; the side panel never shows the all-time best during a run, so the player can't see the goal they're chasing. Show it in the panel as a small line under the Wave stat.
