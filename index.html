@@ -234,6 +234,7 @@
   button.action:disabled { opacity: 0.4; cursor: default; }
   #btn-upgrade { border-color: rgba(76, 201, 240, 0.4); }
   #btn-sell { border-color: rgba(255, 209, 102, 0.4); }
+  #btn-sell.armed { background: #ffd166; color: #1b1b22; font-weight: 700; border-color: #ffd166; }
   .mode-btn {
     background: #20202c;
     color: var(--muted);
@@ -845,11 +846,35 @@ function sellTower(t) {
   state.gold += refund;
   towerGrid[t.r][t.c] = null;
   if (state.selected === t) state.selected = null;
+  disarmSell();
   recomputeRoute();
   repathAllEnemies();
   Sound.sell();
   toast("Sold for " + refund + " gold");
   syncHud();
+}
+
+/* Two-step sell guard: first click/hotkey arms the button, second confirms.
+   Auto-disarms after 2 s or when the selection changes, so a misclick
+   never loses an invested tower. */
+let sellArmed = null, sellArmTimer = 0;
+function armSell() {
+  if (!state.selected) return;
+  sellArmed = state.selected;
+  sellArmTimer = 2;
+  btnSell.textContent = "Sure?";
+  btnSell.classList.add("armed");
+}
+function disarmSell() {
+  sellArmed = null;
+  sellArmTimer = 0;
+  btnSell.textContent = "Sell";
+  btnSell.classList.remove("armed");
+}
+function handleSellAttempt() {
+  if (!state.selected) return;
+  if (sellArmed === state.selected) sellTower(state.selected);
+  else armSell();
 }
 
 function upgradeCost(t) {
@@ -1333,6 +1358,7 @@ function updateWave(dt) {
 function update(dt) {
   Sound.beginFrame();
   if (state.gameOver) return;
+  if (sellArmTimer > 0) { sellArmTimer -= dt; if (sellArmTimer <= 0) disarmSell(); }
   updateWave(dt);
   for (const e of enemies) updateEnemy(e, dt);
   for (let r = 0; r < ROWS; r++) {
@@ -1927,7 +1953,8 @@ function syncHud() {
     lastSelCostsHtml = costsHtml;
     elSelCosts.innerHTML = costsHtml;
   }
-  btnSell.disabled = false;
+  if (sellArmed && state.selected !== sellArmed) disarmSell();
+  btnSell.disabled = !state.selected || state.gameOver;
 }
 
 function selectBuildType(type) {
@@ -2007,7 +2034,7 @@ btnAutostart.addEventListener("click", () => {
 });
 
 btnUpgrade.addEventListener("click", () => upgradeTower(state.selected));
-btnSell.addEventListener("click", () => sellTower(state.selected));
+btnSell.addEventListener("click", handleSellAttempt);
 
 btnRestart.addEventListener("click", resetGame);
 
@@ -2055,7 +2082,7 @@ document.addEventListener("keydown", (ev) => {
   else if (ev.key === "2") selectBuildType("frost");
   else if (ev.key === "3") selectBuildType("cannon");
   else if (ev.key === "u" || ev.key === "U") upgradeTower(state.selected);
-  else if (ev.key === "s" || ev.key === "S") sellTower(state.selected);
+  else if (ev.key === "s" || ev.key === "S") handleSellAttempt();
   else if (ev.key === " ") {
     ev.preventDefault();
     startWave();
@@ -2174,6 +2201,7 @@ function resetGame() {
   state.speed = 1; // don't carry the 2x multiplier into the next game
   state.selected = null;
   state.hover = null; // don't carry the build preview into the next game
+  disarmSell(); // don't carry an armed sell into the next game
   state.autoStartTimer = 0; // don't carry a live countdown into the next game
   state.autoStart = false; // don't carry the auto-start flag into the next game
   state.kills = 0;
