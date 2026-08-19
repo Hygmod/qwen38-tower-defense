@@ -983,23 +983,29 @@ function updateEnemy(e, dt) {
 }
 
 function enemyProgress(e) {
-  // Higher = closer to the exit. Used to pick the "front" target.
+  // Higher = closer to the exit. acquireTarget() uses it to pick the "front"
+  // target ("first" mode) and as a tie-break in the other modes.
+  //
+  // Ranked by the distance still LEFT to the exit along this enemy's current
+  // route, negated so higher = closer: full cells still ahead plus the
+  // fraction of the segment it is partway through. repathEnemy() re-roots
+  // every route at the enemy's own cell on each build/sell, so routeIndex
+  // alone no longer measures closeness to the exit — a front-line enemy 2
+  // cells from the gate carried a freshly re-rooted 3-cell route (low index)
+  // while one 10 cells out had a long route (high index), inverting "First"
+  // targeting after the first tower was placed. Measuring what remains
+  // instead of what was consumed is correct for routes of any length.
+  //
   // A boxed-in enemy (trapped in a pocket sealed off from the exit) has an
-  // empty route: it will NEVER reach the exit, so it must rank lowest, not
-  // highest — otherwise every tower in range pours its DPS into a frozen
-  // target while real enemies march to the gate. -1 keeps it shootable when
-  // it is the only enemy in range (still clears the wave) but strictly below
-  // every enemy actually advancing, including one that has only just
-  // spawned at progress 0 (with 0, the tie was won by array order, so a
-  // stale boxed-in enemy kept stealing shots from fresh spawns).
-  if (e.routeIndex >= e.route.length) return -1;
-  let prog = e.routeIndex;
-  if (e.routeIndex > 0) {
-    const wp = e.route[e.routeIndex];
-    const p = cellCenter(wp.c, wp.r);
-    prog -= Math.hypot(p.x - e.x, p.y - e.y) / CELL;
-  }
-  return prog;
+  // empty route: it will NEVER reach the exit, so it must rank below every
+  // real enemy or every tower in range pours its DPS into a frozen target
+  // while real enemies march to the gate. -Infinity (not -1: real progress
+  // is now negative and unbounded below as routes grow) keeps it last while
+  // best still starts null, so a lone boxed-in enemy stays targetable.
+  if (e.routeIndex >= e.route.length) return -Infinity;
+  const wp = e.route[e.routeIndex];
+  const p = cellCenter(wp.c, wp.r);
+  return (e.routeIndex + 1 - e.route.length) - Math.hypot(p.x - e.x, p.y - e.y) / CELL;
 }
 
 function damageEnemy(e, dmg, slows, src) {

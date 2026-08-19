@@ -248,6 +248,22 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
   it silently fell back to the browser-default accent; it now points at the
   existing `--mint` token (the palette's primary accent). Pure CSS one-liner.
   Playtest 6/6 still passes.
+- Fixed the "First" targeting inversion after the first build: repathEnemy()
+  re-roots each enemy's route at its own cell on every build/sell, so
+  enemyProgress() ranking by e.routeIndex no longer measured closeness to the
+  exit (a front-line enemy on a freshly re-rooted 3-cell route ranked below
+  one 10 cells out, and towers stopped shooting the front). enemyProgress()
+  now returns the negated distance to the exit along the enemy's own route
+  (`routeIndex + 1 - route.length` minus the fraction of the segment still to
+  the next waypoint), so higher = closer for routes of any length; the
+  boxed-in sentinel became -Infinity (not -1, which the backlog sketch
+  suggested) because real progress is now negative and unbounded below as
+  routes grow — the guard's purpose is unchanged: boxed-in ranks last in
+  First yet stays targetable when alone via acquireTarget's `best === null`
+  seed. Verified in Node against the extracted functions: 9 cases pass
+  (front outranks rear after repath, Last picks rearmost, boxed-in alone /
+  vs real across modes, fresh-spawn regression, within-segment monotonicity,
+  strong hp-tie toward front). Playtest 6/6.
 - Cut two per-frame hotspots: syncHud() now diffs the selected tower's stats
   and upgrade/cost innerHTML (lastSelStatsHtml / lastSelCostsHtml, the same
   pattern as lastNwHtml) so the parse only runs when a displayed value
@@ -272,7 +288,6 @@ Each item is one bullet. Keep it short -- a sentence or two saying what is
 wrong or what is missing, and enough detail that the next developer can start
 without rediscovering it. No IDs, no status fields, no priorities.
 
-- The default "First" targeting inverts after the first tower is placed: `repathEnemy()` reassigns each enemy's route to `findPath(towerGrid, cand, EXIT)` starting at the enemy's own current cell (routeIndex reset to 1) on every build/sell, so `enemyProgress()` — which ranks by `e.routeIndex` — no longer measures closeness to the exit; an enemy 2 cells from the gate (short route, low index) now ranks below one 10 cells out, so towers stop shooting the front. Change `enemyProgress()` to rank by remaining distance to the exit (`e.route.length - e.routeIndex`, minus the existing fractional term) while keeping the `routeIndex >= route.length -> -1` guard so boxed-in enemies still rank last.
 - `resetGame()` resets `state.speed` and `state.autoStartTimer` but not the `state.autoStart` flag, so dying with Auto-start on leaves it armed and the next game auto-launches wave 2 four seconds in with no warning. Reset `state.autoStart = false` and call `syncAutostartBtn()` in `resetGame()`.
 - No touch support: canvas input is mouse-only (mousemove/mouseleave/click). Taps do fire click so building works, but there is no preview and the canvas has no `touch-action: none`, so dragging over it scrolls the page on mobile. Add `touch-action: none` and map tap/touchstart onto the same build-or-select path as click.
 - No mid-game restart: the only reset is the game-over "Play Again", so a botched early build can't be abandoned until all 20 lives are gone. Add a Restart ghost button in the controls section that calls `resetGame()`.
