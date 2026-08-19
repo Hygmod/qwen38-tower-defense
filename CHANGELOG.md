@@ -356,6 +356,18 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
   writes the breakdown into a new `#alive-breakdown` span after the "Enemies
   remaining" total, diff-cached in `lastAbHtml` like the other HTML lines, and
   resets it when the wave ends. Playtest 6/6 still passes.
+- Build buttons now show at-a-glance affordability: `syncHud()` sets
+  `btn.disabled = state.gold < TOWER_TYPES[btn.dataset.type].cost` for each
+  `.tower-btn` (same comparison the hover preview's `affordable` uses), and new
+  CSS dims a disabled button (`opacity: 0.4`, cost text turns #ef476f) so a
+  broke player sees which towers they can't yet buy instead of learning from a
+  failed click + toast. An armed type stays armed (`.selected` preserved) while
+  unaffordable and its button re-enables automatically when gold recovers;
+  cancelling it still works via its hotkey. Help card's Building section notes
+  the dimming. Verified in Node against the real script: 19 cases pass
+  (enabled at 200g, all-disabled at 40g, exact-cost boundary at 50/75/100g,
+  armed-while-disabled, re-enable on gold recovery, live re-check after two
+  builds leave 75g). Playtest 6/6 still passes.
 
 ## Backlog
 
@@ -366,7 +378,6 @@ Each item is one bullet. Keep it short -- a sentence or two saying what is
 wrong or what is missing, and enough detail that the next developer can start
 without rediscovering it. No IDs, no status fields, no priorities.
 
-- The build buttons give no at-a-glance affordability signal: a broke player only finds out after a failed click and toast. In `syncHud()`, dim/disable each `.tower-btn` (and its `.tb-cost`) when `state.gold < TOWER_TYPES[btn.dataset.type].cost`, reusing the `affordable` check the hover preview already computes.
 - In `update()`, `enemies = enemies.filter(...)` runs before `updateProjectiles()`, so enemies killed by a projectile linger in the array for a full frame: the "Enemies remaining" count (`enemies.length + toSpawn` in `syncHud()`) and the wave-clear check (`state.toSpawn === 0 && enemies.length === 0` in `updateWave()`) both read the stale count for one frame, and the delay becomes visible if you pause on that frame. Move the filter to the end of `update()`, after `updateProjectiles()`.
 - The per-tower "Value" (damage per gold) stat that drives the upgrade-vs-sell decision requires selecting each tower one at a time to compare. Add a compact "Towers" list to the side panel rendering each placed tower's type + level + Value sorted by Value descending (clicking one selects it), reusing the existing per-tower `dealt`/`invested` fields and `syncHud`'s diff-cache pattern.
 - The new mid-game Restart button (`#btn-restart-mid`, wired straight to `resetGame()`) is a one-misclick wipe of an in-progress run. Guard it with a `confirm()` (the playtest sandbox already stubs it) or an armed two-step (first click arms a "Sure?" state, second confirms) before `resetGame()` fires.

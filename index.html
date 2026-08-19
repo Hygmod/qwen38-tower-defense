@@ -172,6 +172,9 @@
   .tower-btn:hover { background: #242433; }
   .tower-btn:active { transform: translateY(1px); }
   .tower-btn.selected { border-color: var(--mint); box-shadow: 0 0 0 1px var(--mint) inset; }
+  .tower-btn:disabled { opacity: 0.4; cursor: default; }
+  .tower-btn:disabled:hover { background: #20202c; }
+  .tower-btn:disabled .tb-cost { color: #ef476f; }
   .swatch { width: 16px; height: 16px; border-radius: 5px; flex: none; }
   .swatch.gun { background: var(--cyan); box-shadow: 0 0 10px rgba(76, 201, 240, 0.7); }
   .swatch.frost { background: var(--ice); box-shadow: 0 0 10px rgba(184, 192, 255, 0.7); }
@@ -264,7 +267,7 @@
         </div>
         <div class="help-section">
           <h3>Building</h3>
-          <p>Pick a tower, then click an empty cell. You can't build on the path or on another tower, and any placement that <b>seals the maze</b> is rejected for free. Click the active tower button again (or re-press its hotkey) to cancel and go back to inspect-only mode, where clicks just select.</p>
+          <p>Pick a tower, then click an empty cell. You can't build on the path or on another tower, and any placement that <b>seals the maze</b> is rejected for free. Buttons dim while you can't afford the tower and light up again as soon as you can. Click the active tower button again (or re-press its hotkey) to cancel and go back to inspect-only mode, where clicks just select.</p>
           <ul>
             <li><b>Gun</b> (50g) — cheap, fast, single-target. Your workhorse.</li>
             <li><b>Frost</b> (75g) — weak hits, but chills enemies to half speed for 2s. Great vs. fast scouts.</li>
@@ -1799,6 +1802,10 @@ function syncHud() {
 
   towerBtns.forEach((btn) => {
     btn.classList.toggle("selected", btn.dataset.type === state.buildType);
+    // At-a-glance affordability: a broke player sees which towers they cannot
+    // yet afford instead of learning from a failed click + toast. Re-enables
+    // automatically when gold recovers (kills, wave bonus, interest).
+    btn.disabled = state.gold < TOWER_TYPES[btn.dataset.type].cost;
   });
 
   const t = state.selected;
