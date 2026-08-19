@@ -278,6 +278,12 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
   change / build / sell, gate hover is cheap (no BFS), and stats+costs HTML
   are each written once across 60 idle frames with a tower selected.
   Playtest 6/6 still passes.
+- Fixed Play Again carrying the Auto-start flag into the next game: resetGame()
+  reset state.speed and state.autoStartTimer but not state.autoStart, so dying
+  with Auto-start on left it armed and the next game auto-launched wave 2 four
+  seconds in with no warning. resetGame() now also sets state.autoStart = false
+  and calls syncAutostartBtn() (matching the syncSpeedBtn pattern), so a fresh
+  game always starts with auto-start off. Playtest 6/6 still passes.
 
 ## Backlog
 
@@ -288,7 +294,6 @@ Each item is one bullet. Keep it short -- a sentence or two saying what is
 wrong or what is missing, and enough detail that the next developer can start
 without rediscovering it. No IDs, no status fields, no priorities.
 
-- `resetGame()` resets `state.speed` and `state.autoStartTimer` but not the `state.autoStart` flag, so dying with Auto-start on leaves it armed and the next game auto-launches wave 2 four seconds in with no warning. Reset `state.autoStart = false` and call `syncAutostartBtn()` in `resetGame()`.
 - No touch support: canvas input is mouse-only (mousemove/mouseleave/click). Taps do fire click so building works, but there is no preview and the canvas has no `touch-action: none`, so dragging over it scrolls the page on mobile. Add `touch-action: none` and map tap/touchstart onto the same build-or-select path as click.
 - No mid-game restart: the only reset is the game-over "Play Again", so a botched early build can't be abandoned until all 20 lives are gone. Add a Restart ghost button in the controls section that calls `resetGame()`.
 - No way to cancel the active build type: once a tower is picked every empty-cell click builds, and Esc only clears a selected placed tower, so you can't switch to inspect-only. Make clicking the already-selected `.tower-btn` (or re-pressing its hotkey) set `state.buildType = null`, and have the canvas click build only when buildType is set and otherwise just select.

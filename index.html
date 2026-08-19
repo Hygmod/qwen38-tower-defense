@@ -1994,12 +1994,14 @@ function resetGame() {
   state.selected = null;
   state.hover = null; // don't carry the build preview into the next game
   state.autoStartTimer = 0; // don't carry a live countdown into the next game
+  state.autoStart = false; // don't carry the auto-start flag into the next game
   state.kills = 0;
   state.totalGoldEarned = 0;
   waveQueue = [];
   nextWavePlan = planWave(1);
   syncPauseUI();
   syncSpeedBtn();
+  syncAutostartBtn();
   enemies = [];
   projectiles = [];
   explosions = [];
