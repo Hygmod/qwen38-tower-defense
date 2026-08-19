@@ -227,7 +227,10 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
   the extracted script with a keydown-capturing driver: 33 checks pass (hotkey
   gating, H-toggle, auto-pause/resume ownership, manual-pause survival,
   manual-resume takeover, game-over no-op, reset-with-help-open). Playtest 6/6.
-
+- Removed dead `routeKeys`: the cell-key Set rebuilt in recomputeRoute() was
+  never read (path tiles render straight from `route`, and canPlace() uses its
+  own candidate-grid BFS), so it was pure write-only overhead. Deleted the
+  declaration and the rebuild line. Playtest 6/6 still passes.
 
 ## Backlog
 
@@ -238,7 +241,6 @@ Each item is one bullet. Keep it short -- a sentence or two saying what is
 wrong or what is missing, and enough detail that the next developer can start
 without rediscovering it. No IDs, no status fields, no priorities.
 
-- `routeKeys` is dead code: it is declared and rebuilt in `recomputeRoute()` but never read anywhere (the path tiles render straight from `route`). Delete it, or wire it to something that actually needs the cell-key set.
 - `pickEnemyType()` makes waves 3–4 roughly 55% scouts (fast, fragile), a sharp speed spike versus the surrounding waves; worth reviewing the type mix for a gentler early ramp.
 - Enemy HP is shown only as a bar. For brutes and the boss (very high HP) there's no numeric value, so the player can't tell how much more damage is needed to take them down.
 - The volume slider sets `accent-color: var(--accent)` (the #vol-slider input in the panel), but `--accent` is never defined in `:root` — it's the only occurrence in the file — so the input silently falls back to the browser-default accent instead of the game palette. Define the token (mint or amber would fit) or point it at an existing variable.

@@ -619,7 +619,6 @@ let projectiles = [];
 let explosions = [];     // short-lived visual rings from cannon blasts
 let floats = [];          // floating damage/gold text
 let route = [];          // current entry->exit route: array of { c, r }
-let routeKeys = new Set();
 let waveQueue = [];      // active wave: queue of enemy types still to spawn
 let nextWavePlan = [];   // pre-rolled lineup for the wave after the active one
 
@@ -686,7 +685,6 @@ function findPath(grid, from, to) {
 /* The live route the whole field currently uses. */
 function recomputeRoute() {
   route = findPath(towerGrid, ENTRY, EXIT) || [];
-  routeKeys = new Set(route.map((p) => cellKey(p.c, p.r)));
 }
 
 /* Re-route one enemy from wherever it stands right now. An enemy in
