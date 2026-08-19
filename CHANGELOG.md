@@ -213,6 +213,20 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
   the real loop: 3 cases pass (simultaneous-leak sting-once, both-leaks-count,
   lone-leaker regression), and the guard was confirmed to fail the first case
   when removed. Playtest 6/6 still passes.
+- The help overlay now auto-pauses the sim while it is open, and document-level
+  hotkeys no longer steer the game behind it: showHelp() pauses when a game is
+  under way (state.wave > 0, so the first-load auto-show over an empty maze
+  stays live -- which also keeps the harness's boot-running assumption intact)
+  and hideHelp() resumes ONLY if the card took the pause (a manual pause
+  survives a help round-trip; a manual resume via P/button releases the card's
+  claim). While the card is up the keydown handler swallows every hotkey except
+  H/Esc, both of which now close it (H is a toggle). resetGame keeps the world
+  frozen if the card is open (Play Again edge), pause button/badge syncing moved
+  into a shared syncPauseUI() used by togglePause/showHelp/hideHelp/resetGame,
+  and the card notes the game pauses while it's open. Verified in Node against
+  the extracted script with a keydown-capturing driver: 33 checks pass (hotkey
+  gating, H-toggle, auto-pause/resume ownership, manual-pause survival,
+  manual-resume takeover, game-over no-op, reset-with-help-open). Playtest 6/6.
 
 
 ## Backlog
@@ -228,7 +242,6 @@ without rediscovering it. No IDs, no status fields, no priorities.
 - `pickEnemyType()` makes waves 3–4 roughly 55% scouts (fast, fragile), a sharp speed spike versus the surrounding waves; worth reviewing the type mix for a gentler early ramp.
 - Enemy HP is shown only as a bar. For brutes and the boss (very high HP) there's no numeric value, so the player can't tell how much more damage is needed to take them down.
 - The volume slider sets `accent-color: var(--accent)` (the #vol-slider input in the panel), but `--accent` is never defined in `:root` — it's the only occurrence in the file — so the input silently falls back to the browser-default accent instead of the game palette. Define the token (mint or amber would fit) or point it at an existing variable.
-- The help overlay doesn't pause the game and the document-level hotkeys keep firing behind it: pressing H mid-wave opens the card while enemies keep marching, and Space starts a wave, 1/2/3 switch towers, etc. Auto-pause while it's open (update() already gates on state.paused) and skip the hotkey branches while #help-overlay is visible.
 - `syncHud()` runs every frame from frame() and unconditionally rebuilds `elSelStats.innerHTML` whenever a tower is selected (only the Next row has a diff guard, lastNwHtml), and render() runs `canPlace()` — a full grid copy plus BFS — every frame while the mouse hovers an empty cell. Diff the stats HTML the same way and cache the hover placement check, recomputing it only when the hovered cell, the maze, or the gold changes.
 - `spawnEnemy()` runs a fresh `findPath(towerGrid, ENTRY, EXIT)` BFS on every single spawn even though the cached `route` is already current (recomputeRoute() runs on every build and sell). Assign `e.route = route` instead, falling back to a recompute only if route is empty.
 - No touch support: canvas input is mouse-only (mousemove/mouseleave/click). Taps do fire click so building works, but there is no preview and the canvas has no `touch-action: none`, so dragging over it scrolls the page on mobile. Add `touch-action: none` and map tap/touchstart onto the same build-or-select path as click.
