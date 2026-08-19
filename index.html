@@ -1661,10 +1661,13 @@ modeBtns.forEach((btn) => {
 
 btnWave.addEventListener("click", startWave);
 
-btnSpeed.addEventListener("click", () => {
-  state.speed = state.speed === 1 ? 2 : 1;
+function syncSpeedBtn() {
   btnSpeed.textContent = "Speed: " + state.speed + "x";
   btnSpeed.classList.toggle("fast", state.speed === 2);
+}
+btnSpeed.addEventListener("click", () => {
+  state.speed = state.speed === 1 ? 2 : 1;
+  syncSpeedBtn();
 });
 
 function togglePause() {
@@ -1780,6 +1783,7 @@ function resetGame() {
   state.spawnTimer = 0;
   state.gameOver = false;
   state.paused = false;
+  state.speed = 1; // don't carry the 2x multiplier into the next game
   state.selected = null;
   state.autoStartTimer = 0; // don't carry a live countdown into the next game
   state.kills = 0;
@@ -1789,6 +1793,7 @@ function resetGame() {
   btnPause.textContent = "Pause";
   btnPause.classList.remove("fast");
   elPauseBadge.classList.add("hidden");
+  syncSpeedBtn();
   enemies = [];
   projectiles = [];
   explosions = [];
