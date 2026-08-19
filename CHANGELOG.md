@@ -340,6 +340,12 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
   real boot: a spawned enemy reuses the exact cached reference, a new spawn
   after a build tracks the freshly reassigned route, and the empty-cache
   fallback still yields a real entry->exit path. Playtest 6/6 still passes.
+- Added a low-lives urgency signal: `#lives` now gets a `low` class (toggled
+  in `syncHud()` whenever `state.lives <= 3`) that turns the number red
+  (#ff4d4d) and pulses it via a new `lives-pulse` keyframe (opacity 1 -> 0.3
+  -> 1, 0.8s infinite), so a player looking away notices they're about to
+  lose. Pure CSS + one classList.toggle; the playtest stub's toggle(force)
+  already supports the second arg. Playtest 6/6 still passes.
 
 ## Backlog
 
@@ -350,7 +356,6 @@ Each item is one bullet. Keep it short -- a sentence or two saying what is
 wrong or what is missing, and enough detail that the next developer can start
 without rediscovering it. No IDs, no status fields, no priorities.
 
-- The lives stat never signals urgency: `#lives` looks identical at 20 and at 2. Add a red pulse/flash on the `#lives` element when `state.lives <= 3` (a class toggle in `syncHud()`), so a player looking away notices they're about to lose.
 - During a wave the side panel shows only a single "Enemies remaining" count, not what types are still on the field, so you can't tell if frost is needed for the remaining scouts. Extend the `#wave-info` line to also render the alive-enemies type breakdown, reusing the colored-dot markup from `nextWavePreviewHtml()`.
 - Selling a tower leaves its in-flight projectiles alive and they still credit the removed tower: `sellTower()` nulls the grid cell but not the projectiles carrying `p.src === t`, so those shots land and run `src.dealt += dmg` / `src.kills += 1` on a dead object. On sell, drop (or null the src of) any projectile whose `p.src === t`.
 - The new mid-game Restart button (`#btn-restart-mid`, listener wired straight

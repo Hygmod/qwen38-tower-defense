@@ -137,6 +137,14 @@
   .stat .value { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
   #gold { color: var(--amber); }
   #lives { color: var(--pink); }
+  #lives.low {
+    color: #ff4d4d;
+    animation: lives-pulse 0.8s ease-in-out infinite;
+  }
+  @keyframes lives-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
   #wave { color: var(--mint); }
   .section {
     background: var(--panel-2);
@@ -1732,6 +1740,7 @@ function toast(msg, bad) {
 function syncHud() {
   elGold.textContent = String(state.gold);
   elLives.textContent = String(state.lives);
+  elLives.classList.toggle("low", state.lives <= 3);
   elWave.textContent = String(state.wave) + (state.waveInProgress ? " ▸" : "");
   // All-time best (localStorage), visible during the run so the player can
   // see the goal being chased. Amber + star while this run is at/past it.
