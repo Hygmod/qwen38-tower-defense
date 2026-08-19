@@ -265,7 +265,7 @@
         <div class="help-section">
           <h3>Waves &amp; economy</h3>
           <p>Press <b>Start Wave</b> (or <kbd>Space</kbd>). Count and health grow every wave; the <b>Next</b> row shows the exact lineup coming, so you can prepare. Kills and wave clears pay gold, and saved gold banks <b>5% interest</b> (max 30g) on each clear — hoarding a little for a boss wave pays off.</p>
-          <p>Every <b>5th wave</b> ends with a <b style="color:#9d4edd">Boss</b>: very tough, big gold reward. Concentrate fire or slow it.</p>
+          <p>Every <b>5th wave</b> ends with a <b style="color:#9d4edd">Boss</b>: very tough, big gold reward. Concentrate fire or slow it. Brutes and bosses show a live <b>HP count</b> above their health bar – that's how much damage is left to take them down.</p>
         </div>
         <div class="help-section">
           <h3>Upgrading &amp; targeting</h3>
@@ -369,6 +369,7 @@
       Scouts outrun slow towers – frost or high fire-rate helps.
       Brutes soak up damage – set a tower to Strong targeting or box them in.
       Bosses arrive at the tail of waves 5, 10, 15… – concentrate fire or slow them.
+      Brutes and bosses show a live HP count above their bar – that's the damage left.
       The <b>Next</b> row shows the exact lineup of the coming wave – save gold accordingly.
       Saved gold banks <b>5% interest</b> (max 30g) on every cleared wave – hoarding for a boss pays.
     </div>
@@ -1624,6 +1625,19 @@ function drawEnemy(e) {
   ctx.fillStyle = "#06d6a0";
   const frac = Math.max(0, e.hp / e.maxHp);
   ctx.fillRect(bx, by, barW * frac, barH);
+  // High-HP enemies (brute, boss) show their live HP count above the bar,
+  // so the player can see how much more damage they need to take them down.
+  if (e.type === "brute" || e.type === "boss") {
+    ctx.save();
+    ctx.font = "bold 10px ui-sans-serif, system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "rgba(0,0,0,0.55)";
+    ctx.fillText(Math.ceil(e.hp), e.x + 1, by - 7);
+    ctx.fillStyle = e.type === "boss" ? "#ffd166" : "#ffffff";
+    ctx.fillText(Math.ceil(e.hp), e.x, by - 7);
+    ctx.restore();
+  }
 }
 
 /* ============================== HUD / UI ============================== */

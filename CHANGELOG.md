@@ -237,6 +237,12 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
   1.244); wave 5+ keeps the shipped mix exactly (20% brute / 35% scout /
   45% normal). Verified in Node over 200k rolls per wave: distributions match
   the targets and only normal/scout/brute are ever returned. Playtest 6/6.
+- Added numeric HP for high-HP enemies: drawEnemy() now prints a live HP
+  count above the health bar for brutes (white) and the boss (amber), so the
+  player can see exactly how much damage is left to take them down instead of
+  eyeballing a tiny sliver of bar. Pure render addition (Math.ceil(e.hp),
+  same 1px-shadow style as damage floats); the side-panel legend and the help
+  overlay both note the mechanic. Playtest 6/6 still passes.
 
 ## Backlog
 
@@ -247,7 +253,6 @@ Each item is one bullet. Keep it short -- a sentence or two saying what is
 wrong or what is missing, and enough detail that the next developer can start
 without rediscovering it. No IDs, no status fields, no priorities.
 
-- Enemy HP is shown only as a bar. For brutes and the boss (very high HP) there's no numeric value, so the player can't tell how much more damage is needed to take them down.
 - The volume slider sets `accent-color: var(--accent)` (the #vol-slider input in the panel), but `--accent` is never defined in `:root` — it's the only occurrence in the file — so the input silently falls back to the browser-default accent instead of the game palette. Define the token (mint or amber would fit) or point it at an existing variable.
 - `syncHud()` runs every frame from frame() and unconditionally rebuilds `elSelStats.innerHTML` whenever a tower is selected (only the Next row has a diff guard, lastNwHtml), and render() runs `canPlace()` — a full grid copy plus BFS — every frame while the mouse hovers an empty cell. Diff the stats HTML the same way and cache the hover placement check, recomputing it only when the hovered cell, the maze, or the gold changes.
 - `spawnEnemy()` runs a fresh `findPath(towerGrid, ENTRY, EXIT)` BFS on every single spawn even though the cached `route` is already current (recomputeRoute() runs on every build and sell). Assign `e.route = route` instead, falling back to a recompute only if route is empty.
