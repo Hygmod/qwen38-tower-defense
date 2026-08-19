@@ -313,7 +313,7 @@
         </div>
         <div class="help-section">
           <h3>Keys</h3>
-          <p><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> tower (press again to cancel) &nbsp;·&nbsp; <kbd>Space</kbd> start wave &nbsp;·&nbsp; <kbd>U</kbd> upgrade &nbsp;·&nbsp; <kbd>S</kbd> sell &nbsp;·&nbsp; <kbd>P</kbd> pause &nbsp;·&nbsp; <kbd>M</kbd> sound &nbsp;·&nbsp; <kbd>H</kbd> this help &nbsp;·&nbsp; <kbd>Esc</kbd> deselect</p>
+          <p><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> tower (press again to cancel) &nbsp;·&nbsp; <kbd>Space</kbd> start wave &nbsp;·&nbsp; <kbd>U</kbd> upgrade &nbsp;·&nbsp; <kbd>S</kbd> sell &nbsp;·&nbsp; <kbd>P</kbd> pause &nbsp;·&nbsp; <kbd>M</kbd> sound &nbsp;·&nbsp; <kbd>H</kbd> this help &nbsp;·&nbsp; <kbd>Esc</kbd> deselect / cancel build</p>
         </div>
         <button id="btn-help-close" class="primary">Start playing</button>
       </div>
@@ -2110,7 +2110,7 @@ document.addEventListener("keydown", (ev) => {
   } else if (ev.key === "h" || ev.key === "H") {
     showHelp();
   } else if (ev.key === "Escape") {
-    state.selected = null; syncHud();
+    state.selected = null; state.buildType = null; syncHud();
   }
 });
 

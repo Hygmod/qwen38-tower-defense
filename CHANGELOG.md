@@ -442,6 +442,19 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
   with the playtest boot harness: cannon/frost armed and inspect mode all
   reset to gun with button classes re-synced, and a fresh run after a mid-wave
   restart clears its wave. Playtest 6/6 still passes.
+- The `Escape` hotkey now also cancels an armed build type: the Escape branch
+  of the `keydown` handler sets `state.buildType = null` alongside
+  `state.selected = null`, so Esc is a one-keystroke "back to neutral"
+  (matching the re-press-to-cancel behaviour of the tower buttons) instead of
+  leaving a frost/cannon armed and invisible in inspect mode. `syncHud()`
+  already re-syncs the buttons' `.selected` class from the field, and the
+  hover-preview render pass is gated on `state.buildType`, so no other change
+  was needed. The help card's Keys line now reads "Esc deselect / cancel
+  build". Verified in Node against the real script with a keydown-capturing
+  driver: 11 cases pass (esc clears armed type, idempotent, clears
+  selection+type together, hotkey-1 regression, help-card-open gating
+  preserved — esc behind the card still only closes it). Playtest 6/6 still
+  passes.
 - Auto-pause when the tab is hidden or the window loses focus: `frame()`
   clamped dt to 0.1s (no fast-forward) but the sim still ticked while the
   player read elsewhere, so lives could drain quietly. A new `pauseIfAway()`
@@ -468,7 +481,6 @@ Each item is one bullet. Keep it short -- a sentence or two saying what is
 wrong or what is missing, and enough detail that the next developer can start
 without rediscovering it. No IDs, no status fields, no priorities.
 
-- The `Escape` hotkey clears `state.selected` but not `state.buildType`, so pressing Esc with a build type armed does nothing visible. Add `state.buildType = null` to the Escape branch of the `keydown` handler so Esc also cancels the armed build mode (matching the re-press-to-cancel behaviour).
 - Right-click on the canvas does nothing useful (the browser context menu opens) and there is no fast way to drop both an armed build type and a selected tower. Add a `contextmenu` listener on the canvas that `preventDefault()`s and sets `state.buildType = null` and `state.selected = null` (then `syncHud()`), so right-click is a universal "back to neutral" gesture; note it in the help card's Keys line.
 - Hovering a placed tower draws nothing (the hover-preview block in `render()` is gated on `!towerGrid[r][c]`), so comparing a tower's coverage requires clicking it first and deselecting after. In the same hover block, when `state.hover` is over an occupied cell, draw that tower's range circle with `drawRangeCircle(t.x, t.y, t.range, "#06d6a0", 0.06)` so coverage is visible on hover before committing a selection.
 - The mid-game Restart button (`#btn-restart-mid`) currently uses a browser `confirm()` dialog; replace it with the armed two-step (first click arms a "Sure?" state on the button, second within 2 s confirms, auto-disarm on timeout) using the existing `armSell()`/`disarmSell()` pattern generalized (the timer tick already lives in `update()`), for a more polished in-page guard.
