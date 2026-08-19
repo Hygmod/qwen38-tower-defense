@@ -859,10 +859,14 @@ const ENEMY_TYPES = {
   boss:   { hpMul: 8.0,  spdMul: 0.40, radius: 18, color: "#7209b7", rewardMul: 5.0  }
 };
 
+/* Scout share ramps in gently instead of jumping straight to 55%:
+   25% at the debut wave (3), 35% from wave 4 on. Wave 5+ keeps the
+   shipped mix exactly (brute takes the first 20%, scout the next 35%). */
 function pickEnemyType(wave) {
   const r = Math.random();
   if (wave >= 5 && r < 0.20) return "brute";
-  if (wave >= 3 && r < 0.55) return "scout";
+  const scoutP = wave < 3 ? 0 : wave === 3 ? 0.25 : wave === 4 ? 0.35 : 0.55;
+  if (r < scoutP) return "scout";
   return "normal";
 }
 

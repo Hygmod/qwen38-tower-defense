@@ -231,6 +231,12 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
   never read (path tiles render straight from `route`, and canPlace() uses its
   own candidate-grid BFS), so it was pure write-only overhead. Deleted the
   declaration and the rebuild line. Playtest 6/6 still passes.
+- Softened the wave 3–4 scout spike in pickEnemyType(): scouts now debut at
+  25% (wave 3) and 35% (wave 4) instead of jumping straight to 55%, so the
+  expected-speed jump from wave 2 drops from ~+38% to ~+18% (1.0 → 1.175 →
+  1.244); wave 5+ keeps the shipped mix exactly (20% brute / 35% scout /
+  45% normal). Verified in Node over 200k rolls per wave: distributions match
+  the targets and only normal/scout/brute are ever returned. Playtest 6/6.
 
 ## Backlog
 
@@ -241,7 +247,6 @@ Each item is one bullet. Keep it short -- a sentence or two saying what is
 wrong or what is missing, and enough detail that the next developer can start
 without rediscovering it. No IDs, no status fields, no priorities.
 
-- `pickEnemyType()` makes waves 3–4 roughly 55% scouts (fast, fragile), a sharp speed spike versus the surrounding waves; worth reviewing the type mix for a gentler early ramp.
 - Enemy HP is shown only as a bar. For brutes and the boss (very high HP) there's no numeric value, so the player can't tell how much more damage is needed to take them down.
 - The volume slider sets `accent-color: var(--accent)` (the #vol-slider input in the panel), but `--accent` is never defined in `:root` — it's the only occurrence in the file — so the input silently falls back to the browser-default accent instead of the game palette. Define the token (mint or amber would fit) or point it at an existing variable.
 - `syncHud()` runs every frame from frame() and unconditionally rebuilds `elSelStats.innerHTML` whenever a tower is selected (only the Next row has a diff guard, lastNwHtml), and render() runs `canPlace()` — a full grid copy plus BFS — every frame while the mouse hovers an empty cell. Diff the stats HTML the same way and cache the hover placement check, recomputing it only when the hovered cell, the maze, or the gold changes.
