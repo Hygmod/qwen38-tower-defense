@@ -535,6 +535,24 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
   while the game is frozen — the card covers the canvas without firing
   `mouseleave`, so the hover would otherwise stick until the next move. Pure
   one-liner; playtest 6/6 still passes.
+- Added right-click as a universal "back to neutral" gesture on the canvas:
+  a new `contextmenu` listener `preventDefault()`s (no browser menu) and sets
+  `state.buildType = null` + `state.selected = null` (then `syncHud()`, which
+  re-syncs the tower buttons' `.selected` classes), so one gesture drops both
+  an armed build type and a selected tower — matching what `Esc` already did
+  from the keyboard. Help card's Keys line now reads "Esc / right-click
+  deselect + cancel build". Along the way, fixed a latent bug this gesture
+  exposed: the Sell disarm check (`sellArmed && state.selected !== sellArmed`) +
+  `btnSell.disabled` update in `syncHud()` sat AFTER the no-selection early
+  return, so clearing the selection (tap on empty ground, Esc/right-click)
+  skipped the disarm — an armed Sell survived, and re-selecting the same tower
+  + one Sell click confirmed an un-armed sale. Both lines now run before the
+  early return (the different-tower case is unchanged). Verified in Node
+  against the real script with a listener-capturing driver: 20 cases pass
+  (preventDefault, both fields cleared, button classes re-synced, disarm on
+  deselect via right-click, no un-armed sale after re-select, two-step intact,
+  disarm on switch-to-different-tower, Esc via the real keydown handler).
+  Playtest 6/6 still passes.
 
 ## Backlog
 
@@ -545,7 +563,6 @@ Each item is one bullet. Keep it short -- a sentence or two saying what is
 wrong or what is missing, and enough detail that the next developer can start
 without rediscovering it. No IDs, no status fields, no priorities.
 
-- Right-click on the canvas does nothing useful (the browser context menu opens) and there is no fast way to drop both an armed build type and a selected tower. Add a `contextmenu` listener on the canvas that `preventDefault()`s and sets `state.buildType = null` and `state.selected = null` (then `syncHud()`), so right-click is a universal "back to neutral" gesture; note it in the help card's Keys line.
 - Hovering a placed tower draws nothing (the hover-preview block in `render()` is gated on `!towerGrid[r][c]`), so comparing a tower's coverage requires clicking it first and deselecting after. In the same hover block, when `state.hover` is over an occupied cell, draw that tower's range circle with `drawRangeCircle(t.x, t.y, t.range, "#06d6a0", 0.06)` so coverage is visible on hover before committing a selection.
 - The canvas cursor is always default: there is no affordance that a cell is buildable or a tower is clickable. In the `mousemove` handler set `canvas.style.cursor` to `"crosshair"` when `state.buildType` is armed, `"pointer"` when `state.hover` is over an occupied cell (`towerGrid[r][c]`), and `"default"` otherwise (and back to `"default"` in the `mouseleave` handler).
 - The mid-game Restart button (`#btn-restart-mid`) currently uses a browser `confirm()` dialog; replace it with the armed two-step (first click arms a "Sure?" state on the button, second within 2 s confirms, auto-disarm on timeout) using the existing `armSell()`/`disarmSell()` pattern generalized (the timer tick already lives in `update()`), for a more polished in-page guard.

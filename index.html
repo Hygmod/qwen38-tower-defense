@@ -317,7 +317,7 @@
         </div>
         <div class="help-section">
           <h3>Keys</h3>
-          <p><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> tower (press again to cancel) &nbsp;·&nbsp; <kbd>Space</kbd> start wave &nbsp;·&nbsp; <kbd>U</kbd> upgrade &nbsp;·&nbsp; <kbd>S</kbd> sell &nbsp;·&nbsp; <kbd>P</kbd> pause &nbsp;·&nbsp; <kbd>M</kbd> sound &nbsp;·&nbsp; <kbd>H</kbd> this help &nbsp;·&nbsp; <kbd>Esc</kbd> deselect / cancel build</p>
+          <p><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> tower (press again to cancel) &nbsp;·&nbsp; <kbd>Space</kbd> start wave &nbsp;·&nbsp; <kbd>U</kbd> upgrade &nbsp;·&nbsp; <kbd>S</kbd> sell &nbsp;·&nbsp; <kbd>P</kbd> pause &nbsp;·&nbsp; <kbd>M</kbd> sound &nbsp;·&nbsp; <kbd>H</kbd> this help &nbsp;·&nbsp; <kbd>Esc</kbd> / right-click deselect + cancel build</p>
         </div>
         <button id="btn-help-close" class="primary">Start playing</button>
       </div>
@@ -1977,6 +1977,12 @@ function syncHud() {
   }
 
   const t = state.selected;
+  // Disarm + button state BEFORE the no-selection early return: clearing the
+  // selection (tap on empty ground, Esc/right-click neutral) must also drop
+  // an armed Sell, otherwise the armed state survives and re-selecting the
+  // same tower + one Sell click would confirm an un-armed sale.
+  if (sellArmed && state.selected !== sellArmed) disarmSell();
+  btnSell.disabled = !state.selected || state.gameOver;
   if (!t) {
     elSelNone.classList.remove("hidden");
     elSelBox.classList.add("hidden");
@@ -2019,8 +2025,6 @@ function syncHud() {
     lastSelCostsHtml = costsHtml;
     elSelCosts.innerHTML = costsHtml;
   }
-  if (sellArmed && state.selected !== sellArmed) disarmSell();
-  btnSell.disabled = !state.selected || state.gameOver;
 }
 
 function selectBuildType(type) {
@@ -2228,6 +2232,17 @@ function tapCell(cell) {
 
 canvas.addEventListener("click", (ev) => {
   tapCell(eventCell(ev));
+});
+
+/* Right-click: universal "back to neutral" — drops the armed build type and
+   the selected tower in one gesture (Esc does the same from the keyboard).
+   syncHud() re-syncs the button .selected classes and disarms the Sell
+   button (its disarm-on-selection-change check runs there). */
+canvas.addEventListener("contextmenu", (ev) => {
+  ev.preventDefault();
+  state.buildType = null;
+  state.selected = null;
+  syncHud();
 });
 
 /* Touch: the same build-or-select path as click. The press position doubles
