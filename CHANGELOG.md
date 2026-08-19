@@ -177,6 +177,16 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
   countdown so it never surprises. Verified in Node against the real loop
   (ON fires wave 2 with no click, OFF never auto-starts, manual start cancels
   the timer), and the full playtest suite (6/6) still passes.
+- Fixed the responsive layout: on narrow windows the flexbox-centering
+  overflow bug clipped the left edge of the canvas with no way to scroll back
+  to it. Replaced `align-items/justify-content: center` on body with
+  `margin: auto` on `.app` (avoids the negative-overflow clipping), added
+  `overflow: auto` on body as a safety net, and two media queries: ≤960px
+  switches the layout to a column (canvas above panel, panel full-width up to
+  480px) and ≤700px scales the canvas to fit the viewport width while keeping
+  its 4:3 aspect ratio (eventCell() already compensates for CSS scaling so
+  mouse input stays accurate). Playtest 6/6 still passes.
+
 
 ## Backlog
 
@@ -189,7 +199,6 @@ without rediscovering it. No IDs, no status fields, no priorities.
 
 - `routeKeys` is dead code: it is declared and rebuilt in `recomputeRoute()` but never read anywhere (the path tiles render straight from `route`). Delete it, or wire it to something that actually needs the cell-key set.
 - `resetGame()` doesn't clear `state.hover`, so the build preview (range circle, dashed re-route line, and tower ghost) lingers over the fresh maze until the mouse happens to move again.
-- The layout isn't responsive: `.app` is a fixed ~950px flex row with no wrap/scroll and `body` centers it, so on a narrow window the flexbox-centering overflow bug clips the left edge of the canvas with no way to scroll back to it.
 - Audio is all-or-nothing (mute only). There's no master volume — a master GainNode plus a slider would let players dial the synthesized SFX down without losing it entirely.
 - `pickEnemyType()` makes waves 3–4 roughly 55% scouts (fast, fragile), a sharp speed spike versus the surrounding waves; worth reviewing the type mix for a gentler early ramp.
 - All the strategy (frost vs scouts, Strong targeting for brutes, kill-boxing, interest banking) lives in dense hint text with no onboarding; a dismissible "how to play" overlay or Help button would make it readable on first load.
