@@ -846,6 +846,9 @@ function sellTower(t) {
   const refund = Math.round(t.invested * SELL_RATIO);
   state.gold += refund;
   towerGrid[t.r][t.c] = null;
+  // Drop in-flight shots still carrying this tower as their source, so a
+  // sold tower never keeps crediting dealt/kills off its dead object.
+  projectiles = projectiles.filter((p) => p.src !== t);
   if (state.selected === t) state.selected = null;
   disarmSell();
   recomputeRoute();

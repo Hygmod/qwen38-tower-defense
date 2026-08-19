@@ -421,6 +421,16 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
   moved up 2.5px (y+12 -> y+9.5) to make room, and the help card's targeting
   section notes the badge. Hover ghost preview is untouched (drawTowerBody
   only). Playtest 6/6 still passes.
+- Fixed sold towers keeping credit from in-flight shots: `sellTower()` nulled
+  the grid cell but left projectiles carrying `p.src === t` alive, so those
+  shots landed and ran `src.dealt += dmg` / `src.kills += 1` on the removed
+  tower's now-orphaned object (never shown again, quietly inflating its stats).
+  `sellTower()` now filters those shots out of `projectiles` (`p.src !== t`) on
+  sell, so a tower's in-flight shots die with it while other towers' shots and
+  src-less shots are untouched. Verified in Node against the real script with
+  the playtest boot harness: 9 cases pass (two-T1 shots dropped, T2 shot and
+  src-less shot survive, grid cell cleared, refund still granted). Playtest 6/6
+  still passes.
 
 ## Backlog
 
@@ -431,7 +441,6 @@ Each item is one bullet. Keep it short -- a sentence or two saying what is
 wrong or what is missing, and enough detail that the next developer can start
 without rediscovering it. No IDs, no status fields, no priorities.
 
-- Selling a tower leaves its in-flight projectiles alive and they still credit the removed tower: `sellTower()` nulls the grid cell but not the projectiles carrying `p.src === t`, so those shots land and run `src.dealt += dmg` / `src.kills += 1` on a dead object that is never shown again. On sell, drop (or null the `src` of) any projectile whose `p.src === t`.
 - `resetGame()` resets `state.speed`, `state.autoStart`, `state.selected`, `state.hover` but not `state.buildType`, so Play Again (and the mid-game Restart) carries the armed build type into the fresh game — die with Cannon armed and the new run starts armed for Cannon, or in inspect mode if it had been cancelled. Add `state.buildType = "gun"` (the boot default) to `resetGame()` alongside the other resets, matching the speed/auto-start carry-over fixes.
 - The game keeps running while the tab is hidden or the window loses focus: `frame()` clamps `dt` to 0.1s so there is no fast-forward, but lives can still drain while the player is reading this page elsewhere. Add a `document` `visibilitychange` listener (and/or `window` `blur`) that sets `state.paused = true` and calls `syncPauseUI()` when `document.hidden` and a game is under way (`!state.gameOver`); do NOT auto-resume on focus return — the player resumes deliberately via P or the button, which avoids a surprise wave start.
 - The `Escape` hotkey clears `state.selected` but not `state.buildType`, so pressing Esc with a build type armed does nothing visible. Add `state.buildType = null` to the Escape branch of the `keydown` handler so Esc also cancels the armed build mode (matching the re-press-to-cancel behaviour).
