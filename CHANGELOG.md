@@ -243,6 +243,11 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
   eyeballing a tiny sliver of bar. Pure render addition (Math.ceil(e.hp),
   same 1px-shadow style as damage floats); the side-panel legend and the help
   overlay both note the mechanic. Playtest 6/6 still passes.
+- Fixed the volume slider's undefined accent: #vol-slider used
+  `accent-color: var(--accent)` but `--accent` was never defined in :root, so
+  it silently fell back to the browser-default accent; it now points at the
+  existing `--mint` token (the palette's primary accent). Pure CSS one-liner.
+  Playtest 6/6 still passes.
 
 ## Backlog
 
@@ -253,7 +258,6 @@ Each item is one bullet. Keep it short -- a sentence or two saying what is
 wrong or what is missing, and enough detail that the next developer can start
 without rediscovering it. No IDs, no status fields, no priorities.
 
-- The volume slider sets `accent-color: var(--accent)` (the #vol-slider input in the panel), but `--accent` is never defined in `:root` — it's the only occurrence in the file — so the input silently falls back to the browser-default accent instead of the game palette. Define the token (mint or amber would fit) or point it at an existing variable.
 - `syncHud()` runs every frame from frame() and unconditionally rebuilds `elSelStats.innerHTML` whenever a tower is selected (only the Next row has a diff guard, lastNwHtml), and render() runs `canPlace()` — a full grid copy plus BFS — every frame while the mouse hovers an empty cell. Diff the stats HTML the same way and cache the hover placement check, recomputing it only when the hovered cell, the maze, or the gold changes.
 - `spawnEnemy()` runs a fresh `findPath(towerGrid, ENTRY, EXIT)` BFS on every single spawn even though the cached `route` is already current (recomputeRoute() runs on every build and sell). Assign `e.route = route` instead, falling back to a recompute only if route is empty.
 - No touch support: canvas input is mouse-only (mousemove/mouseleave/click). Taps do fire click so building works, but there is no preview and the canvas has no `touch-action: none`, so dragging over it scrolls the page on mobile. Add `touch-action: none` and map tap/touchstart onto the same build-or-select path as click.
