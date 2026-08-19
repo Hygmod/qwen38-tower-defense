@@ -620,6 +620,9 @@ let projectiles = [];
 let explosions = [];     // short-lived visual rings from cannon blasts
 let floats = [];          // floating damage/gold text
 let route = [];          // current entry->exit route: array of { c, r }
+let mazeVersion = 0;     // bumped in recomputeRoute(); keys the hover BFS cache
+let hoverBfs = null;     // cached candidate-grid entry->exit path for the hovered cell
+let hoverBfsKey = "";    // "c,r,mazeVersion" the hoverBfs cache was computed for
 let waveQueue = [];      // active wave: queue of enemy types still to spawn
 let nextWavePlan = [];   // pre-rolled lineup for the wave after the active one
 
@@ -686,6 +689,7 @@ function findPath(grid, from, to) {
 /* The live route the whole field currently uses. */
 function recomputeRoute() {
   route = findPath(towerGrid, ENTRY, EXIT) || [];
+  mazeVersion++; // any maze change invalidates the hover preview's BFS cache
 }
 
 /* Re-route one enemy from wherever it stands right now. An enemy in
@@ -1456,7 +1460,24 @@ function render() {
     if (!towerGrid[r][c]) {
       const center = cellCenter(c, r);
       const type = TOWER_TYPES[state.buildType];
-      const check = canPlace(c, r);
+      // The commit path re-runs canPlace() on click; here the cheap checks
+      // (gates, enemy standing on the cell) run live every frame, while the
+      // expensive candidate-grid BFS is cached per (cell, maze) so a static
+      // maze under a hovering mouse does not re-path every frame.
+      let check;
+      if (c < 0 || c >= COLS || r < 0 || r >= ROWS) check = { ok: false };
+      else if ((c === ENTRY.c && r === ENTRY.r) || (c === EXIT.c && r === EXIT.r)) check = { ok: false };
+      else if (enemyInCell(c, r)) check = { ok: false };
+      else {
+        const key = c + "," + r + "," + mazeVersion;
+        if (key !== hoverBfsKey) {
+          hoverBfsKey = key;
+          const candidate = towerGrid.map((row) => row.slice());
+          candidate[r][c] = { candidate: true };
+          hoverBfs = findPath(candidate, ENTRY, EXIT);
+        }
+        check = { ok: !!hoverBfs, path: hoverBfs };
+      }
       const affordable = state.gold >= type.cost;
       const ok = check.ok && affordable;
       const tint = ok ? type.color : "#ef476f";
@@ -1654,6 +1675,7 @@ const elSelNone = document.getElementById("sel-none");
 const elSelBox = document.getElementById("sel-box");
 const elSelTitle = document.getElementById("sel-title");
 const elSelStats = document.getElementById("sel-stats");
+elSelStats.title = "Damage dealt and kills since this tower was built. Value = damage per gold invested — upgrade the towers that earn it back fastest, sell the ones that don't.";
 const elSelCosts = document.getElementById("sel-costs");
 const btnWave = document.getElementById("btn-wave");
 const btnSpeed = document.getElementById("btn-speed");
@@ -1669,6 +1691,8 @@ const modeBtns = Array.from(document.querySelectorAll(".mode-btn"));
 
 let toastTimer = 0;
 let lastNwHtml = "";
+let lastSelStatsHtml = "";
+let lastSelCostsHtml = "";
 
 /* Colored-dot breakdown of the coming wave's pre-rolled lineup. */
 function nextWavePreviewHtml() {
@@ -1728,26 +1752,37 @@ function syncHud() {
   const type = TOWER_TYPES[t.type];
   modeBtns.forEach((b) => b.classList.toggle("selected", b.dataset.mode === t.mode));
   elSelTitle.textContent = type.name + "  ·  Lv " + t.level + (t.level >= MAX_LEVEL ? " (max)" : "");
-  elSelStats.innerHTML =
+  // Only the live counters (Dealt/Kills/Value) change frame-to-frame, and
+  // innerHTML is a parse: diff the string like lastNwHtml and only touch
+  // the DOM when it visibly changes.
+  const statsHtml =
     "Damage <b>" + t.damage + "</b> &nbsp; Range <b>" + t.range.toFixed(1) + "</b><br>" +
     "Rate <b>" + (1 / t.fireCooldown).toFixed(1) + "/s</b> &nbsp; " +
     (type.slows ? "Chills enemies" : "Single-target") + "<br>" +
     "Dealt <b>" + Math.round(t.dealt) + "</b> &nbsp; Kills <b>" + (t.kills || 0) +
     " &nbsp; Value <b>" + (t.invested > 0 ? ((t.dealt || 0) / t.invested).toFixed(1) : "0.0") + "x</b>";
-  elSelStats.title = "Damage dealt and kills since this tower was built. Value = damage per gold invested — upgrade the towers that earn it back fastest, sell the ones that don't.";
+  if (statsHtml !== lastSelStatsHtml) {
+    lastSelStatsHtml = statsHtml;
+    elSelStats.innerHTML = statsHtml;
+  }
+  let costsHtml;
   if (t.level >= MAX_LEVEL) {
-    elSelCosts.textContent = "Max level reached.";
+    costsHtml = "Max level reached.";
     btnUpgrade.disabled = true;
   } else {
     const cost = upgradeCost(t);
     const next = upgradedStats(t);
     // Before→after preview: the escalating upgrade cost is an informed
     // choice, not a guess, when you can see exactly what it buys.
-    elSelCosts.innerHTML =
+    costsHtml =
       "Upgrade " + cost + "g · Sell " + Math.round(t.invested * SELL_RATIO) + "g<br>"
       + "<b style=\"color:var(--text)\">→</b> Damage " + t.damage + " <b style=\"color:var(--mint)\">" + next.damage + "</b>"
       + " &nbsp; Range " + t.range.toFixed(1) + " <b style=\"color:var(--mint)\">" + next.range.toFixed(1) + "</b>";
     btnUpgrade.disabled = state.gold < cost;
+  }
+  if (costsHtml !== lastSelCostsHtml) {
+    lastSelCostsHtml = costsHtml;
+    elSelCosts.innerHTML = costsHtml;
   }
   btnSell.disabled = false;
 }

@@ -248,6 +248,20 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
   it silently fell back to the browser-default accent; it now points at the
   existing `--mint` token (the palette's primary accent). Pure CSS one-liner.
   Playtest 6/6 still passes.
+- Cut two per-frame hotspots: syncHud() now diffs the selected tower's stats
+  and upgrade/cost innerHTML (lastSelStatsHtml / lastSelCostsHtml, the same
+  pattern as lastNwHtml) so the parse only runs when a displayed value
+  changes, and the constant tooltip moved to init; render() no longer runs
+  canPlace()'s full grid copy + BFS every frame while hovering — the cheap
+  checks (bounds, gates, enemy-on-cell via enemyInCell()) stay live each
+  frame and the candidate-grid BFS is cached in hoverBfs keyed on
+  (cell, mazeVersion), with mazeVersion bumped in recomputeRoute() so any
+  build/sell/reset invalidates it. The commit path (click -> buildTower ->
+  canPlace) is untouched and remains authoritative. Verified in Node against
+  the real loop: cache holds across 30 frames (one BFS), recomputes on cell
+  change / build / sell, gate hover is cheap (no BFS), and stats+costs HTML
+  are each written once across 60 idle frames with a tower selected.
+  Playtest 6/6 still passes.
 
 ## Backlog
 
@@ -258,8 +272,7 @@ Each item is one bullet. Keep it short -- a sentence or two saying what is
 wrong or what is missing, and enough detail that the next developer can start
 without rediscovering it. No IDs, no status fields, no priorities.
 
-- `syncHud()` runs every frame from frame() and unconditionally rebuilds `elSelStats.innerHTML` whenever a tower is selected (only the Next row has a diff guard, lastNwHtml), and render() runs `canPlace()` — a full grid copy plus BFS — every frame while the mouse hovers an empty cell. Diff the stats HTML the same way and cache the hover placement check, recomputing it only when the hovered cell, the maze, or the gold changes.
-- `spawnEnemy()` runs a fresh `findPath(towerGrid, ENTRY, EXIT)` BFS on every single spawn even though the cached `route` is already current (recomputeRoute() runs on every build and sell). Assign `e.route = route` instead, falling back to a recompute only if route is empty.
+- `spawnEnemy() runs a fresh `findPath(towerGrid, ENTRY, EXIT)` BFS on every single spawn even though the cached `route` is already current (recomputeRoute() runs on every build and sell). Assign `e.route = route` instead, falling back to a recompute only if route is empty.
 - No touch support: canvas input is mouse-only (mousemove/mouseleave/click). Taps do fire click so building works, but there is no preview and the canvas has no `touch-action: none`, so dragging over it scrolls the page on mobile. Add `touch-action: none` and map tap/touchstart onto the same build-or-select path as click.
 - `bestWave` (persisted in localStorage) is only surfaced on the game-over screen; the side panel never shows the all-time best during a run, so the player can't see the goal they're chasing. Show it in the panel, e.g. a small line under the Wave stat.
 
