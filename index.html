@@ -1316,7 +1316,6 @@ function update(dt) {
   if (state.gameOver) return;
   updateWave(dt);
   for (const e of enemies) updateEnemy(e, dt);
-  enemies = enemies.filter((e) => !e.dead && !e.leaked);
   for (let r = 0; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) {
       const t = towerGrid[r][c];
@@ -1324,6 +1323,10 @@ function update(dt) {
     }
   }
   updateProjectiles(dt);
+  // Filter after projectiles so enemies killed this frame are gone before
+  // the next frame's wave-clear check and "Enemies remaining" count read
+  // the array (and before render draws them one extra frame).
+  enemies = enemies.filter((e) => !e.dead && !e.leaked);
   updateEffects(dt);
   updateFloats(dt);
 }
