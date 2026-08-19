@@ -186,6 +186,15 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
   480px) and ≤700px scales the canvas to fit the viewport width while keeping
   its 4:3 aspect ratio (eventCell() already compensates for CSS scaling so
   mouse input stays accurate). Playtest 6/6 still passes.
+- Added onboarding: a dismissible "How to play" overlay (#help-overlay, a
+  scrollable help-card over the canvas) that explains the goal, building and
+  the sealing rule, waves/economy (Next-row preview, 5% interest banking,
+  bosses), upgrade/sell, per-tower targeting modes, enemy counterplay (scouts,
+  brutes, kill-box) and the key list. It auto-shows on first load only —
+  dismissal persists in localStorage (td-help-seen) — and reopens via the new
+  "How to play" ghost button or the `H` hotkey; Escape closes it when open
+  (otherwise still deselects). Pure UI: no game-logic changes, playtest 6/6
+  still passes.
 
 
 ## Backlog
@@ -201,7 +210,6 @@ without rediscovering it. No IDs, no status fields, no priorities.
 - `resetGame()` doesn't clear `state.hover`, so the build preview (range circle, dashed re-route line, and tower ghost) lingers over the fresh maze until the mouse happens to move again.
 - Audio is all-or-nothing (mute only). There's no master volume — a master GainNode plus a slider would let players dial the synthesized SFX down without losing it entirely.
 - `pickEnemyType()` makes waves 3–4 roughly 55% scouts (fast, fragile), a sharp speed spike versus the surrounding waves; worth reviewing the type mix for a gentler early ramp.
-- All the strategy (frost vs scouts, Strong targeting for brutes, kill-boxing, interest banking) lives in dense hint text with no onboarding; a dismissible "how to play" overlay or Help button would make it readable on first load.
 - Enemy HP is shown only as a bar. For brutes and the boss (very high HP) there's no numeric value, so the player can't tell how much more damage is needed to take them down.
 
 When you finish an item, DELETE its bullet from here and add a line under Done.

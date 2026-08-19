@@ -88,6 +88,28 @@
   .overlay-stats .ost { text-align: center; background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 16px; min-width: 72px; }
   .overlay-stats .ost .ov { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
   .overlay-stats .ost .ol { font-size: 10px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--muted); margin-top: 2px; }
+  .help-card {
+    width: min(540px, calc(100% - 44px));
+    max-height: calc(100% - 44px);
+    overflow-y: auto;
+    background: linear-gradient(180deg, var(--panel) 0%, #12121a 100%);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 18px 20px;
+    display: flex; flex-direction: column; gap: 12px;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
+    text-align: left;
+  }
+  .help-card h2 { font-size: 20px; letter-spacing: 1px; }
+  .help-sub { color: var(--muted); font-size: 12.5px; }
+  .help-sub b { color: var(--text); }
+  .help-section h3 {
+    font-size: 10px; letter-spacing: 1.8px; text-transform: uppercase;
+    color: var(--mint); margin-bottom: 4px;
+  }
+  .help-section p, .help-section li { color: var(--muted); font-size: 12.5px; line-height: 1.55; }
+  .help-section ul { padding-left: 16px; display: flex; flex-direction: column; gap: 3px; }
+  .help-section b { color: var(--text); }
   .panel {
     width: 262px;
     background: linear-gradient(180deg, var(--panel) 0%, #12121a 100%);
@@ -223,6 +245,52 @@
       <div id="overlay-stats"></div>
       <button id="btn-restart" class="primary">Play Again</button>
     </div>
+    <div id="help-overlay" class="overlay hidden">
+      <div class="help-card">
+        <h2>How to play</h2>
+        <p class="help-sub">Stop the horde from crossing the maze. You start with <b>20 lives</b> and <b>200 gold</b>.</p>
+        <div class="help-section">
+          <h3>Goal</h3>
+          <p>Enemies spawn at the <b style="color:var(--mint)">green gate</b> (left) and walk the path to the <b style="color:var(--amber)">amber gate</b> (right). Each one that gets through costs a life — lose all 20 and it's over. Routes are pathfound live around your towers, so where you build bends the maze.</p>
+        </div>
+        <div class="help-section">
+          <h3>Building</h3>
+          <p>Pick a tower, then click an empty cell. You can't build on the path or on another tower, and any placement that <b>seals the maze</b> is rejected for free.</p>
+          <ul>
+            <li><b>Gun</b> (50g) — cheap, fast, single-target. Your workhorse.</li>
+            <li><b>Frost</b> (75g) — weak hits, but chills enemies to half speed for 2s. Great vs. fast scouts.</li>
+            <li><b>Cannon</b> (100g) — slow blast with area damage. Melts swarms.</li>
+          </ul>
+        </div>
+        <div class="help-section">
+          <h3>Waves &amp; economy</h3>
+          <p>Press <b>Start Wave</b> (or <kbd>Space</kbd>). Count and health grow every wave; the <b>Next</b> row shows the exact lineup coming, so you can prepare. Kills and wave clears pay gold, and saved gold banks <b>5% interest</b> (max 30g) on each clear — hoarding a little for a boss wave pays off.</p>
+          <p>Every <b>5th wave</b> ends with a <b style="color:#9d4edd">Boss</b>: very tough, big gold reward. Concentrate fire or slow it.</p>
+        </div>
+        <div class="help-section">
+          <h3>Upgrading &amp; targeting</h3>
+          <p>Click a placed tower to select it. <b>Upgrade</b> raises damage and range at an escalating cost; <b>Sell</b> refunds 70% of everything invested. Set each tower's <b>targeting mode</b>:</p>
+          <ul>
+            <li><b>First</b> — closest to the exit (default). <b>Last</b> — rearmost.</li>
+            <li><b>Strong</b> — toughest enemy: focus fire on brutes and bosses.</li>
+            <li><b>Close</b> — nearest to the tower.</li>
+          </ul>
+        </div>
+        <div class="help-section">
+          <h3>Counterplay</h3>
+          <ul>
+            <li><b>Scouts</b> (fast, wave 3+) outrun slow towers — frost or high fire-rate.</li>
+            <li><b>Brutes</b> (tanky, wave 5+) soak damage — Strong targeting or a kill box.</li>
+            <li><b>Kill box</b> — seal an enemy into a pocket (entry→exit still connects). It stops and dissolves after 5s if unshot, but towers in range can shoot it for free gold.</li>
+          </ul>
+        </div>
+        <div class="help-section">
+          <h3>Keys</h3>
+          <p><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> tower &nbsp;·&nbsp; <kbd>Space</kbd> start wave &nbsp;·&nbsp; <kbd>U</kbd> upgrade &nbsp;·&nbsp; <kbd>S</kbd> sell &nbsp;·&nbsp; <kbd>P</kbd> pause &nbsp;·&nbsp; <kbd>M</kbd> sound &nbsp;·&nbsp; <kbd>H</kbd> this help &nbsp;·&nbsp; <kbd>Esc</kbd> deselect</p>
+        </div>
+        <button id="btn-help-close" class="primary">Start playing</button>
+      </div>
+    </div>
   </div>
 
   <aside class="panel">
@@ -286,6 +354,7 @@
       </div>
       <button class="ghost" id="btn-sound">Sound: On</button>
       <button class="ghost" id="btn-autostart">Auto-start: Off</button>
+      <button class="ghost" id="btn-help">How to play</button>
     </div>
 
     <div class="hint" style="margin-top:2px;">
@@ -305,7 +374,7 @@
       live pathfinding around your towers. A placement that would seal the
       maze is rejected. Keys: <kbd>1</kbd> gun, <kbd>2</kbd> frost, <kbd>3</kbd> cannon,
       <kbd>U</kbd> upgrade, <kbd>S</kbd> sell, <kbd>Space</kbd> start wave,
-      <kbd>P</kbd> pause, <kbd>M</kbd> sound.
+      <kbd>P</kbd> pause, <kbd>M</kbd> sound, <kbd>H</kbd> help.
       <b>Auto-start</b> launches the next wave a few seconds after a clear —
       toggle it to keep building hands-free.
     </div>
@@ -1712,6 +1781,19 @@ btnSell.addEventListener("click", () => sellTower(state.selected));
 
 btnRestart.addEventListener("click", resetGame);
 
+/* How-to-play overlay: shown on first load (until dismissed), reopenable via
+   the button or H. Dismissal persists so returning players start clean. */
+const elHelp = document.getElementById("help-overlay");
+const btnHelpClose = document.getElementById("btn-help-close");
+const btnHelp = document.getElementById("btn-help");
+function showHelp() { elHelp.classList.remove("hidden"); }
+function hideHelp() {
+  elHelp.classList.add("hidden");
+  localStorage.setItem("td-help-seen", "1");
+}
+btnHelp.addEventListener("click", showHelp);
+btnHelpClose.addEventListener("click", hideHelp);
+
 document.addEventListener("keydown", (ev) => {
   if (ev.key === "1") selectBuildType("gun");
   else if (ev.key === "2") selectBuildType("frost");
@@ -1726,9 +1808,11 @@ document.addEventListener("keydown", (ev) => {
   } else if (ev.key === "m" || ev.key === "M") {
     Sound.setMuted(!Sound.muted());
     syncSoundBtn();
+  } else if (ev.key === "h" || ev.key === "H") {
+    showHelp();
   } else if (ev.key === "Escape") {
-    state.selected = null;
-    syncHud();
+    if (!elHelp.classList.contains("hidden")) hideHelp();
+    else { state.selected = null; syncHud(); }
   }
 });
 
@@ -1842,6 +1926,7 @@ nextWavePlan = planWave(1);
 syncHud();
 syncSoundBtn();
 syncAutostartBtn();
+if (!localStorage.getItem("td-help-seen")) showHelp();
 requestAnimationFrame(frame);
 
 })();
