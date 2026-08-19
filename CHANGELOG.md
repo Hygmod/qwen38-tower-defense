@@ -413,6 +413,14 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
   Also fixed `btnSell.disabled` to be `!state.selected || state.gameOver` (was
   unconditionally `false`), so the button is properly dimmed when nothing is
   selected or the game is over. Playtest 6/6 still passes.
+- Added on-field targeting-mode badges: `drawTower()` now prints a small bold
+  F/L/S/C letter (mapped from `t.mode`, defaulting to F) under the level pips,
+  so towers set to e.g. Strong are identifiable at a glance without selecting
+  them. Non-default modes render amber (#ffd166), the default First a muted
+  grey (#8a8aa0), both with the usual 1px shadow for readability; the pips
+  moved up 2.5px (y+12 -> y+9.5) to make room, and the help card's targeting
+  section notes the badge. Hover ghost preview is untouched (drawTowerBody
+  only). Playtest 6/6 still passes.
 
 ## Backlog
 
@@ -423,7 +431,6 @@ Each item is one bullet. Keep it short -- a sentence or two saying what is
 wrong or what is missing, and enough detail that the next developer can start
 without rediscovering it. No IDs, no status fields, no priorities.
 
-- A tower's targeting mode (First/Last/Strong/Close) is only shown in the side panel, so with several towers placed you can't tell which are set to Strong (the brute/boss counterplay) without selecting each one. In `drawTower()`, render a small 1-2 letter badge (F/L/S/C) for `t.mode` under the existing level pips.
 - The `Escape` hotkey clears `state.selected` but not `state.buildType`, so pressing Esc with a build type armed does nothing visible. Add `state.buildType = null` to the Escape branch of the `keydown` handler so Esc also cancels the armed build mode (matching the re-press-to-cancel behaviour).
 - Selling a tower leaves its in-flight projectiles alive and they still credit the removed tower: `sellTower()` nulls the grid cell but not the projectiles carrying `p.src === t`, so those shots land and run `src.dealt += dmg` / `src.kills += 1` on a dead object that is never shown again. On sell, drop (or null the `src` of) any projectile whose `p.src === t`.
 - The mid-game Restart button (`#btn-restart-mid`) currently uses a browser `confirm()` dialog; replace it with an armed two-step (first click arms a "Sure?" state on the button, second confirms) for a more polished in-page guard. The same pattern would apply to `#btn-sell` when that item is done.
