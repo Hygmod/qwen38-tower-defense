@@ -493,6 +493,23 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
   persists across cooldowns (updateTower's early return leaves it set) and the
   dead/leaked guard covers enemies killed mid-frame before the next acquire.
   Playtest 6/6 still passes.
+- Added a bulk targeting control: an "All" button (`#btn-mode-all`) in the
+  `#sel-modes` row re-points every tower to the mode the selected tower
+  currently has (the one highlighted in the row), so a boss wave is a one-click
+  focus instead of clicking each tower's mode one at a time. Clicking it sets
+  `t.mode` on every tower in `allTowers()` (a fresh scan, so towers built later
+  are included on the next press), plays a new short `Sound.ui()` tick (added
+  to the Sound module — the backlog's `Sound.ui()` did not yet exist), and runs
+  `syncHud()`; the selected tower's own mode is unchanged so its `.selected`
+  highlight (the class the backlog's ".on" referred to) stays correct for free.
+  The button is styled amber (`.mode-all`, sharing its base with `.mode-btn` via
+  a compound selector) so it reads as an action, not a fifth mode, and is
+  excluded from the `modeBtns` array so the generic per-tower handler and the
+  `.selected` toggle never touch it. A no-op when nothing is selected (the row
+  is hidden anyway). Help card's targeting section and the row's hint both note
+  it. Verified in Node against the real script with a click-dispatching driver:
+  11 cases pass (build 3, apply Strong/Close/Last to all, new tower re-pointed,
+  no-selection no-op). Playtest 6/6 still passes.
 
 ## Backlog
 
@@ -503,7 +520,6 @@ Each item is one bullet. Keep it short -- a sentence or two saying what is
 wrong or what is missing, and enough detail that the next developer can start
 without rediscovering it. No IDs, no status fields, no priorities.
 
-- Targeting mode is per-tower with no bulk control: the boss toast says "concentrate your fire", but pointing every tower at Strong or Close for a boss wave means clicking each tower and its mode row one at a time. Add a small "All" control to the `#sel-modes` row that sets `t.mode = mode` on every tower in `allTowers()` (plus `Sound.ui()` and the existing `.on` class sync on `modeBtns`), so one click re-points the whole field.
 - `Sound.beginFrame()` is called at the top of `update()`, which is skipped while paused, so the per-frame sound budget keeps its last value: after a dense frame that spent all 12 emissions, a build/upgrade/sell while paused plays no sound at all. Move the `beginFrame()` call from `update()` to `frame()` (before the paused check) so every rendered frame gets a fresh budget regardless of pause.
 - A stale build preview can sit under the help card: `showHelp()` does not clear `state.hover`, and the card covers the canvas without firing `mouseleave`, so a hovering mouse leaves the range circle + dashed re-route line drawn on the visible canvas slivers behind the 540px card while the game is frozen. Clear `state.hover = null` in `showHelp()` (matching `resetGame()`, which already does this).
 - Right-click on the canvas does nothing useful (the browser context menu opens) and there is no fast way to drop both an armed build type and a selected tower. Add a `contextmenu` listener on the canvas that `preventDefault()`s and sets `state.buildType = null` and `state.selected = null` (then `syncHud()`), so right-click is a universal "back to neutral" gesture; note it in the help card's Keys line.

@@ -235,7 +235,7 @@
   #btn-upgrade { border-color: rgba(76, 201, 240, 0.4); }
   #btn-sell { border-color: rgba(255, 209, 102, 0.4); }
   #btn-sell.armed { background: #ffd166; color: #1b1b22; font-weight: 700; border-color: #ffd166; }
-  .mode-btn {
+  .mode-btn, .mode-all {
     background: #20202c;
     color: var(--muted);
     border: 1px solid var(--line);
@@ -245,8 +245,12 @@
     cursor: pointer;
     transition: color 0.12s ease, border-color 0.12s ease, background 0.12s ease;
   }
-  .mode-btn:hover { background: #242433; color: var(--text); }
+  .mode-btn:hover, .mode-all:hover { background: #242433; color: var(--text); }
   .mode-btn.selected { border-color: var(--mint); color: var(--mint); box-shadow: 0 0 0 1px var(--mint) inset; }
+  /* "All" re-points every tower to the highlighted mode — an action, not a
+     fifth mode, so it reads amber (the palette's "do a thing" accent). */
+  .mode-all { border-color: rgba(255, 209, 102, 0.55); color: #ffd166; }
+  .mode-all:hover { background: #2a2617; color: #ffd166; border-color: #ffd166; }
   .muted { color: var(--muted); font-size: 12px; }
   #sel-title { font-weight: 800; font-size: 14px; }
   #sel-stats { font-size: 12px; line-height: 1.6; }
@@ -301,7 +305,7 @@
             <li><b>Strong</b> — toughest enemy: focus fire on brutes and bosses.</li>
             <li><b>Close</b> — nearest to the tower.</li>
           </ul>
-          <p class="muted" style="margin-top:6px;">Each tower shows its mode as a small F/L/S/C letter under its level pips (non-default modes glow amber).</p>
+          <p class="muted" style="margin-top:6px;">Pick a mode on one tower, then hit <b style="color:#ffd166">All</b> to point every tower at it — one click to focus the whole field on a boss. Each tower shows its mode as a small F/L/S/C letter under its level pips (non-default modes glow amber).</p>
         </div>
         <div class="help-section">
           <h3>Counterplay</h3>
@@ -370,8 +374,9 @@
           <button class="mode-btn" data-mode="last">Last</button>
           <button class="mode-btn" data-mode="strong">Strong</button>
           <button class="mode-btn" data-mode="close">Close</button>
+          <button class="mode-all" id="btn-mode-all" title="Apply the highlighted mode to every tower">All</button>
         </div>
-        <div class="hint">First: nearest the gate. Strong: focus fire (brutes). Close: nearest here.</div>
+        <div class="hint">First: nearest the gate. Strong: focus fire (brutes). Close: nearest here. All: point every tower at that mode.</div>
         <div class="row">
           <button class="action" id="btn-upgrade">Upgrade</button>
           <button class="action" id="btn-sell">Sell</button>
@@ -610,6 +615,7 @@ const Sound = (() => {
       tone({ freq: 659, type: "triangle", dur: 0.09, vol: 0.08, delay: 0.14 });
     },
     sell() { tone({ freq: 500, end: 250, type: "sine", dur: 0.12, vol: 0.08 }); },
+    ui() { tone({ freq: 720, type: "triangle", dur: 0.04, vol: 0.06 }); },
     waveStart() { tone({ freq: 440, end: 880, type: "triangle", dur: 0.16, vol: 0.1 }); },
     waveClear() {
       tone({ freq: 523, type: "triangle", dur: 0.09, vol: 0.1 });
@@ -1822,6 +1828,7 @@ const btnSell = document.getElementById("btn-sell");
 const btnRestart = document.getElementById("btn-restart");
 const towerBtns = Array.from(document.querySelectorAll(".tower-btn"));
 const modeBtns = Array.from(document.querySelectorAll(".mode-btn"));
+const btnModeAll = document.getElementById("btn-mode-all");
 
 let toastTimer = 0;
 let lastNwHtml = "";
@@ -2034,6 +2041,16 @@ modeBtns.forEach((btn) => {
       syncHud();
     }
   });
+});
+
+// "All": re-point every tower to the mode the selected tower currently has
+// (the one highlighted in the row), so a boss wave is a one-click focus.
+btnModeAll.addEventListener("click", () => {
+  if (!state.selected) return;
+  const mode = state.selected.mode || "first";
+  allTowers().forEach((t) => { t.mode = mode; });
+  Sound.ui();
+  syncHud();
 });
 
 btnWave.addEventListener("click", startWave);
