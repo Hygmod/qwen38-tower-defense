@@ -594,7 +594,9 @@ const Sound = (() => {
       localStorage.setItem("td-volume", volume);
       if (masterGain) masterGain.gain.value = volume;
     },
-    /* Reset the per-frame emission budget; called at the top of update(). */
+    /* Reset the per-frame emission budget; called every rendered frame in
+       frame() so paused frames (build/upgrade/sell while frozen) still get
+       a fresh budget instead of inheriting a spent one from the last live frame. */
     beginFrame() { frameBudget = 12; },
     shoot(kind) {
       if (kind === "gun") tone({ freq: 900, end: 500, type: "triangle", dur: 0.05, vol: 0.05 });
@@ -1380,7 +1382,6 @@ function updateWave(dt) {
 /* ============================== Update ================================ */
 
 function update(dt) {
-  Sound.beginFrame();
   if (state.gameOver) return;
   if (sellArmTimer > 0) { sellArmTimer -= dt; if (sellArmTimer <= 0) disarmSell(); }
   updateWave(dt);
@@ -2328,6 +2329,7 @@ function frame(ts) {
   if (dt > 0.1) dt = 0.1; // tab was backgrounded; do not fast-forward
   dt *= state.speed;      // 1x or 2x: a pure delta-time multiplier
 
+  Sound.beginFrame(); // fresh per-frame sound budget on every rendered frame
   if (!state.paused) update(dt); // paused: freeze simulation, keep rendering
   render();
   syncHud();

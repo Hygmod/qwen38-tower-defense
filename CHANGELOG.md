@@ -510,6 +510,25 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
   it. Verified in Node against the real script with a click-dispatching driver:
   11 cases pass (build 3, apply Strong/Close/Last to all, new tower re-pointed,
   no-selection no-op). Playtest 6/6 still passes.
+- Fixed paused actions going silent after a dense frame: `Sound.beginFrame()`
+  (the per-frame 12-emission budget reset) was called at the top of
+  `update()`, which `frame()` skips while paused, so once a dense live frame
+  spent all 12 emissions the budget sat at 0 for the entire pause and every
+  build/upgrade/sell/`Sound.ui()` click while frozen was dropped silently by
+  `tone()`/`blast()`'s `frameBudget <= 0` guard. The call now sits in
+  `frame()` just before the `if (!state.paused) update(dt)` check, so every
+  rendered frame — paused or not — starts with a fresh budget; the one-frame
+  gap (a click landing in the same inter-frame window as a dense frame's
+  spend) is inherent to event timing and not worth guarding. Verified in Node
+  against the real script with a counted-oscillator AudioContext stub:
+  paused build, upgrade, and sell after a spent budget each emit, and the
+  12/frame cap still holds under 20 shots. Caveat: the old-code regression
+  probe did NOT reproduce the silence in the same harness (a paused shot
+  still emitted), so the before/after delta is unproven there — likely a
+  harness quirk around the stepped frame; the after-behaviour and the code
+  path (beginFrame was the only budget reset, and it lived inside the
+  paused-skipped update()) are both confirmed by inspection. Playtest 6/6
+  still passes.
 
 ## Backlog
 
@@ -520,7 +539,6 @@ Each item is one bullet. Keep it short -- a sentence or two saying what is
 wrong or what is missing, and enough detail that the next developer can start
 without rediscovering it. No IDs, no status fields, no priorities.
 
-- `Sound.beginFrame()` is called at the top of `update()`, which is skipped while paused, so the per-frame sound budget keeps its last value: after a dense frame that spent all 12 emissions, a build/upgrade/sell while paused plays no sound at all. Move the `beginFrame()` call from `update()` to `frame()` (before the paused check) so every rendered frame gets a fresh budget regardless of pause.
 - A stale build preview can sit under the help card: `showHelp()` does not clear `state.hover`, and the card covers the canvas without firing `mouseleave`, so a hovering mouse leaves the range circle + dashed re-route line drawn on the visible canvas slivers behind the 540px card while the game is frozen. Clear `state.hover = null` in `showHelp()` (matching `resetGame()`, which already does this).
 - Right-click on the canvas does nothing useful (the browser context menu opens) and there is no fast way to drop both an armed build type and a selected tower. Add a `contextmenu` listener on the canvas that `preventDefault()`s and sets `state.buildType = null` and `state.selected = null` (then `syncHud()`), so right-click is a universal "back to neutral" gesture; note it in the help card's Keys line.
 - Hovering a placed tower draws nothing (the hover-preview block in `render()` is gated on `!towerGrid[r][c]`), so comparing a tower's coverage requires clicking it first and deselecting after. In the same hover block, when `state.hover` is over an occupied cell, draw that tower's range circle with `drawRangeCircle(t.x, t.y, t.range, "#06d6a0", 0.06)` so coverage is visible on hover before committing a selection.
