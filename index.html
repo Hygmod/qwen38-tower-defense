@@ -1974,7 +1974,9 @@ function togglePause() {
   syncPauseUI();
 }
 btnPause.addEventListener("click", togglePause);
-btnRestartMid.addEventListener("click", resetGame); // mid-game restart, same reset as Play Again
+btnRestartMid.addEventListener("click", () => {
+  if (confirm("Abandon this run and start over?")) resetGame();
+}); // mid-game restart, guarded by confirm against misclicks
 
 const volSlider = document.getElementById("vol-slider");
 function syncSoundBtn() {

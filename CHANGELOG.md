@@ -307,6 +307,11 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
   with synthetic touch events: 19 cases pass (build, gold, select, preview,
   drag-suppress, wobble-tap, cancel, two-finger, seal-reject, game-over).
   Playtest 6/6 still passes.
+- Guarded the mid-game Restart button (`#btn-restart-mid`) against
+  misclicks: its click handler now wraps `resetGame()` in a
+  `confirm("Abandon this run and start over?")`, so a stray click no
+  longer wipes an in-progress run. The game-over Play Again button is
+  untouched (the run is already over). Playtest 6/6 still passes.
 - Added a way to cancel the active build type: `selectBuildType()` now
   toggles, so re-picking the already-selected tower button (or re-pressing
   its hotkey) sets `state.buildType = null` and drops every button's
@@ -409,11 +414,11 @@ Each item is one bullet. Keep it short -- a sentence or two saying what is
 wrong or what is missing, and enough detail that the next developer can start
 without rediscovering it. No IDs, no status fields, no priorities.
 
-- The new mid-game Restart button (`#btn-restart-mid`, wired straight to `resetGame()`) is a one-misclick wipe of an in-progress run. Guard it with a `confirm()` (the playtest sandbox already stubs it) or an armed two-step (first click arms a "Sure?" state, second confirms) before `resetGame()` fires.
 - Selling a tower is a single irreversible click that refunds and removes an invested tower with no guard. Add the same class of guard as the mid-game Restart: an armed two-step on `#btn-sell` (or a short unsell grace) so a misclick doesn't lose a tower.
 - A tower's targeting mode (First/Last/Strong/Close) is only shown in the side panel, so with several towers placed you can't tell which are set to Strong (the brute/boss counterplay) without selecting each one. In `drawTower()`, render a small 1-2 letter badge (F/L/S/C) for `t.mode` under the existing level pips.
 - `#btn-sell` is set to `btnSell.disabled = false` unconditionally in `syncHud()`, so with no tower selected it looks active but clicking is a silent no-op. Disable it when `state.selected` is null, alongside the existing `btnUpgrade` enable/disable logic.
 - The `Escape` hotkey clears `state.selected` but not `state.buildType`, so pressing Esc with a build type armed does nothing visible. Add `state.buildType = null` to the Escape branch of the `keydown` handler so Esc also cancels the armed build mode (matching the re-press-to-cancel behaviour).
 - Selling a tower leaves its in-flight projectiles alive and they still credit the removed tower: `sellTower()` nulls the grid cell but not the projectiles carrying `p.src === t`, so those shots land and run `src.dealt += dmg` / `src.kills += 1` on a dead object that is never shown again. On sell, drop (or null the `src` of) any projectile whose `p.src === t`.
+- The mid-game Restart button (`#btn-restart-mid`) currently uses a browser `confirm()` dialog; replace it with an armed two-step (first click arms a "Sure?" state on the button, second confirms) for a more polished in-page guard. The same pattern would apply to `#btn-sell` when that item is done.
 
 When you finish an item, DELETE its bullet from here and add a line under Done.
