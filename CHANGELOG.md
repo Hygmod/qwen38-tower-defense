@@ -195,6 +195,15 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
   "How to play" ghost button or the `H` hotkey; Escape closes it when open
   (otherwise still deselects). Pure UI: no game-logic changes, playtest 6/6
   still passes.
+- Added a master volume slider (range input, 0–100%) next to the Sound
+  button: a master GainNode (created once with the AudioContext) sits between
+  every tone/blast and the destination, so the slider scales all SFX
+  uniformly without touching per-sound levels. Volume persists in
+  localStorage (td-volume); the slider dims and disables when sound is muted
+  and re-syncs on boot and on mute toggle. Also fixed `resetGame()` not
+  clearing `state.hover`, which left a stale build preview (range circle,
+  dashed re-route line, tower ghost) over the fresh maze after Play Again.
+  Playtest 6/6 still passes.
 
 
 ## Backlog
@@ -207,8 +216,6 @@ wrong or what is missing, and enough detail that the next developer can start
 without rediscovering it. No IDs, no status fields, no priorities.
 
 - `routeKeys` is dead code: it is declared and rebuilt in `recomputeRoute()` but never read anywhere (the path tiles render straight from `route`). Delete it, or wire it to something that actually needs the cell-key set.
-- `resetGame()` doesn't clear `state.hover`, so the build preview (range circle, dashed re-route line, and tower ghost) lingers over the fresh maze until the mouse happens to move again.
-- Audio is all-or-nothing (mute only). There's no master volume — a master GainNode plus a slider would let players dial the synthesized SFX down without losing it entirely.
 - `pickEnemyType()` makes waves 3–4 roughly 55% scouts (fast, fragile), a sharp speed spike versus the surrounding waves; worth reviewing the type mix for a gentler early ramp.
 - Enemy HP is shown only as a bar. For brutes and the boss (very high HP) there's no numeric value, so the player can't tell how much more damage is needed to take them down.
 

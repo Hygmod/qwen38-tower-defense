@@ -352,7 +352,10 @@
         <button class="ghost" id="btn-speed">Speed: 1x</button>
         <button class="ghost" id="btn-pause">Pause</button>
       </div>
-      <button class="ghost" id="btn-sound">Sound: On</button>
+      <div class="row" style="align-items:center;gap:6px;">
+        <button class="ghost" id="btn-sound" style="flex:1;">Sound: On</button>
+        <input type="range" id="vol-slider" min="0" max="100" value="100" style="width:70px;accent-color:var(--accent);" title="Master volume">
+      </div>
       <button class="ghost" id="btn-autostart">Auto-start: Off</button>
       <button class="ghost" id="btn-help">How to play</button>
     </div>
@@ -472,8 +475,10 @@ const AUTO_START_DELAY = 4; // seconds between a cleared wave and its auto-start
 
 const Sound = (() => {
   let actx = null;
+  let masterGain = null;
   let noiseBuf = null;
   let muted = localStorage.getItem("td-sound") === "0";
+  let volume = Math.max(0, Math.min(1, parseFloat(localStorage.getItem("td-volume")) || 1));
   let frameBudget = 12;
 
   function ensure() {
@@ -482,6 +487,9 @@ const Sound = (() => {
       const AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return null;
       try { actx = new AC(); } catch (e) { return null; }
+      masterGain = actx.createGain();
+      masterGain.gain.value = volume;
+      masterGain.connect(actx.destination);
     }
     if (actx.state === "suspended") actx.resume();
     return actx;
@@ -501,7 +509,7 @@ const Sound = (() => {
     g.gain.setValueAtTime(vol, t0);
     g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
     osc.connect(g);
-    g.connect(c.destination);
+    g.connect(masterGain);
     osc.start(t0);
     osc.stop(t0 + dur + 0.03);
   }
@@ -527,7 +535,7 @@ const Sound = (() => {
     g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.22);
     src.connect(f);
     f.connect(g);
-    g.connect(c.destination);
+    g.connect(masterGain);
     src.start(t0);
     src.stop(t0 + 0.3);
   }
@@ -538,6 +546,12 @@ const Sound = (() => {
       muted = m;
       localStorage.setItem("td-sound", m ? "0" : "1");
       if (!m) ensure(); // user gesture: unlock audio now
+    },
+    volume: () => volume,
+    setVolume(v) {
+      volume = Math.max(0, Math.min(1, v));
+      localStorage.setItem("td-volume", volume);
+      if (masterGain) masterGain.gain.value = volume;
     },
     /* Reset the per-frame emission budget; called at the top of update(). */
     beginFrame() { frameBudget = 12; },
@@ -1757,13 +1771,22 @@ function togglePause() {
 }
 btnPause.addEventListener("click", togglePause);
 
+const volSlider = document.getElementById("vol-slider");
 function syncSoundBtn() {
   btnSound.textContent = "Sound: " + (Sound.muted() ? "Off" : "On");
   btnSound.classList.toggle("fast", !Sound.muted());
+  volSlider.disabled = Sound.muted();
+  volSlider.style.opacity = Sound.muted() ? 0.35 : 1;
+}
+function syncVolSlider() {
+  volSlider.value = Math.round(Sound.volume() * 100);
 }
 btnSound.addEventListener("click", () => {
   Sound.setMuted(!Sound.muted());
   syncSoundBtn();
+});
+volSlider.addEventListener("input", () => {
+  Sound.setVolume(parseInt(volSlider.value, 10) / 100);
 });
 
 function syncAutostartBtn() {
@@ -1878,6 +1901,7 @@ function resetGame() {
   state.paused = false;
   state.speed = 1; // don't carry the 2x multiplier into the next game
   state.selected = null;
+  state.hover = null; // don't carry the build preview into the next game
   state.autoStartTimer = 0; // don't carry a live countdown into the next game
   state.kills = 0;
   state.totalGoldEarned = 0;
@@ -1925,6 +1949,7 @@ recomputeRoute();
 nextWavePlan = planWave(1);
 syncHud();
 syncSoundBtn();
+syncVolSlider();
 syncAutostartBtn();
 if (!localStorage.getItem("td-help-seen")) showHelp();
 requestAnimationFrame(frame);
