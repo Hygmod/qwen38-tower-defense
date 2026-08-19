@@ -307,6 +307,18 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
   with synthetic touch events: 19 cases pass (build, gold, select, preview,
   drag-suppress, wobble-tap, cancel, two-finger, seal-reject, game-over).
   Playtest 6/6 still passes.
+- Added a way to cancel the active build type: `selectBuildType()` now
+  toggles, so re-picking the already-selected tower button (or re-pressing
+  its hotkey) sets `state.buildType = null` and drops every button's
+  `.selected` class, entering an inspect mode where `tapCell()` clears the
+  selection but never builds (and the hover preview render pass is skipped,
+  which also removed its only null-deref path). Switching to a different
+  type still switches as before. Help card's Building section and Keys line
+  note the cancel. Verified in Node against the real script: 19 cases pass
+  (toggle on/off via re-pick, switch gun→frost→cannon, no selected class in
+  inspect mode, inspect tap builds nothing/charges no gold/selects placed
+  towers, build-mode tap regression, render safe with hover + null
+  buildType). Playtest 6/6 still passes.
 
 ## Backlog
 
@@ -317,7 +329,6 @@ Each item is one bullet. Keep it short -- a sentence or two saying what is
 wrong or what is missing, and enough detail that the next developer can start
 without rediscovering it. No IDs, no status fields, no priorities.
 
-- No way to cancel the active build type: once a tower is picked every empty-cell click builds, and Esc only clears a selected placed tower, so you can't switch to inspect-only. Make clicking the already-selected `.tower-btn` (or re-pressing its hotkey) set `state.buildType = null`, and have the canvas click build only when buildType is set and otherwise just select.
 - `bestWave` (persisted in localStorage) is only surfaced on the game-over screen; the side panel never shows the all-time best during a run, so the player can't see the goal they're chasing. Show it in the panel as a small line under the Wave stat.
 - `spawnEnemy()` runs a fresh `findPath(towerGrid, ENTRY, EXIT)` BFS on every single spawn even though the cached `route` is already current (recomputeRoute() runs on every build and sell). Assign `e.route = route` instead, falling back to a recompute only if route is empty.
 - The lives stat never signals urgency: `#lives` looks identical at 20 and at 2. Add a red pulse/flash on the `#lives` element when `state.lives <= 3` (a class toggle in `syncHud()`), so a player looking away notices they're about to lose.

@@ -256,7 +256,7 @@
         </div>
         <div class="help-section">
           <h3>Building</h3>
-          <p>Pick a tower, then click an empty cell. You can't build on the path or on another tower, and any placement that <b>seals the maze</b> is rejected for free.</p>
+          <p>Pick a tower, then click an empty cell. You can't build on the path or on another tower, and any placement that <b>seals the maze</b> is rejected for free. Click the active tower button again (or re-press its hotkey) to cancel and go back to inspect-only mode, where clicks just select.</p>
           <ul>
             <li><b>Gun</b> (50g) — cheap, fast, single-target. Your workhorse.</li>
             <li><b>Frost</b> (75g) — weak hits, but chills enemies to half speed for 2s. Great vs. fast scouts.</li>
@@ -287,7 +287,7 @@
         </div>
         <div class="help-section">
           <h3>Keys</h3>
-          <p><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> tower &nbsp;·&nbsp; <kbd>Space</kbd> start wave &nbsp;·&nbsp; <kbd>U</kbd> upgrade &nbsp;·&nbsp; <kbd>S</kbd> sell &nbsp;·&nbsp; <kbd>P</kbd> pause &nbsp;·&nbsp; <kbd>M</kbd> sound &nbsp;·&nbsp; <kbd>H</kbd> this help &nbsp;·&nbsp; <kbd>Esc</kbd> deselect</p>
+          <p><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> tower (press again to cancel) &nbsp;·&nbsp; <kbd>Space</kbd> start wave &nbsp;·&nbsp; <kbd>U</kbd> upgrade &nbsp;·&nbsp; <kbd>S</kbd> sell &nbsp;·&nbsp; <kbd>P</kbd> pause &nbsp;·&nbsp; <kbd>M</kbd> sound &nbsp;·&nbsp; <kbd>H</kbd> this help &nbsp;·&nbsp; <kbd>Esc</kbd> deselect</p>
         </div>
         <button id="btn-help-close" class="primary">Start playing</button>
       </div>
@@ -1462,8 +1462,8 @@ function render() {
     ctx.restore();
   }
 
-  // Hover preview
-  if (state.hover && !state.gameOver) {
+  // Hover preview (only while a build type is armed)
+  if (state.hover && state.buildType && !state.gameOver) {
     const { c, r } = state.hover;
     if (!towerGrid[r][c]) {
       const center = cellCenter(c, r);
@@ -1797,7 +1797,9 @@ function syncHud() {
 }
 
 function selectBuildType(type) {
-  state.buildType = type;
+  // Re-picking the already-active type (button click or hotkey) cancels it:
+  // buildType = null is inspect mode, where canvas clicks only select.
+  state.buildType = (state.buildType === type) ? null : type;
   state.selected = null;
   syncHud();
 }
@@ -1960,6 +1962,7 @@ function tapCell(cell) {
     return;
   }
   state.selected = null;
+  if (!state.buildType) return; // inspect mode: no build type armed
   buildTower(cell.c, cell.r);
   syncHud();
 }
