@@ -155,6 +155,13 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
   in Node against the extracted waveInterest: 8/8 cases pass (zero, floor
   rounding, below/at/over cap), plus shape checks that the wave-clear branch
   calls it and credits gold + totalGoldEarned with bonus+interest.
+- Added a before→after upgrade preview to the Selected Tower panel: the
+  cost line now shows what the upgrade buys (e.g. "→ Damage 12 17 · Range
+  3.4 3.8") so the escalating cost is an informed choice. The math moved
+  into a shared upgradedStats() helper used by both upgradeTower() and the
+  preview, so the two can never drift; ladder verified in Node for all
+  three tower types (damage/range per level match the old inline formula
+  exactly).
 
 ## Backlog
 
@@ -168,7 +175,6 @@ without rediscovering it. No IDs, no status fields, no priorities.
 - `routeKeys` is dead code: it is declared and rebuilt in `recomputeRoute()` but never read anywhere (the path tiles render straight from `route`). Delete it, or wire it to something that actually needs the cell-key set.
 - `resetGame()` (Play Again) resets the Pause state and button but not `state.speed` / the Speed button, so a 2x session carries the multiplier into the next game — inconsistent with the other control-state resets in the same function.
 - `resetGame()` doesn't clear `state.hover`, so the build preview (range circle, dashed re-route line, and tower ghost) lingers over the fresh maze until the mouse happens to move again.
-- The Selected Tower panel shows the upgrade cost but not what the upgrade does; add a before→after preview (e.g. "Damage 12 → 17, Range 3.4 → 3.7") so the escalating upgrade cost is an informed choice instead of a guess.
 - Every wave needs a manual Start Wave click. An optional "auto-start next wave" toggle (short delay after a clear) is a common TD convenience that lets the player keep building between waves.
 - The layout isn't responsive: `.app` is a fixed ~950px flex row with no wrap/scroll and `body` centers it, so on a narrow window the flexbox-centering overflow bug clips the left edge of the canvas with no way to scroll back to it.
 - Audio is all-or-nothing (mute only). There's no master volume — a master GainNode plus a slider would let players dial the synthesized SFX down without losing it entirely.

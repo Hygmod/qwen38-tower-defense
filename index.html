@@ -722,6 +722,16 @@ function upgradeCost(t) {
   return Math.round(TOWER_TYPES[t.type].cost * 0.7 * t.level);
 }
 
+/* The stats a tower WOULD have after one upgrade. Shared by upgradeTower()
+   and the Selected Tower panel's before→after preview, so the preview can
+   never drift from what the button actually does. */
+function upgradedStats(t) {
+  return {
+    damage: Math.round(t.damage * 1.35 + 1),
+    range: t.range + 0.35
+  };
+}
+
 function upgradeTower(t) {
   if (!t || t.level >= MAX_LEVEL) return;
   const cost = upgradeCost(t);
@@ -732,8 +742,9 @@ function upgradeTower(t) {
   state.gold -= cost;
   t.invested += cost;
   t.level += 1;
-  t.damage = Math.round(t.damage * 1.35 + 1);
-  t.range = t.range + 0.35;
+  const next = upgradedStats(t);
+  t.damage = next.damage;
+  t.range = next.range;
   t.pulse = 0.35;
   Sound.upgrade();
   syncHud();
@@ -1597,7 +1608,13 @@ function syncHud() {
     btnUpgrade.disabled = true;
   } else {
     const cost = upgradeCost(t);
-    elSelCosts.textContent = "Upgrade " + cost + "g · Sell " + Math.round(t.invested * SELL_RATIO) + "g";
+    const next = upgradedStats(t);
+    // Before→after preview: the escalating upgrade cost is an informed
+    // choice, not a guess, when you can see exactly what it buys.
+    elSelCosts.innerHTML =
+      "Upgrade " + cost + "g · Sell " + Math.round(t.invested * SELL_RATIO) + "g<br>"
+      + "<b style=\"color:var(--text)\">→</b> Damage " + t.damage + " <b style=\"color:var(--mint)\">" + next.damage + "</b>"
+      + " &nbsp; Range " + t.range.toFixed(1) + " <b style=\"color:var(--mint)\">" + next.range.toFixed(1) + "</b>";
     btnUpgrade.disabled = state.gold < cost;
   }
   btnSell.disabled = false;
