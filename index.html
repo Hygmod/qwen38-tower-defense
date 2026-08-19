@@ -352,6 +352,7 @@
       <div class="row">
         <button class="ghost" id="btn-speed">Speed: 1x</button>
         <button class="ghost" id="btn-pause">Pause</button>
+        <button class="ghost" id="btn-restart-mid" title="Abandon this run and start over">Restart</button>
       </div>
       <div class="row" style="align-items:center;gap:6px;">
         <button class="ghost" id="btn-sound" style="flex:1;">Sound: On</button>
@@ -1687,6 +1688,7 @@ const elSelCosts = document.getElementById("sel-costs");
 const btnWave = document.getElementById("btn-wave");
 const btnSpeed = document.getElementById("btn-speed");
 const btnPause = document.getElementById("btn-pause");
+const btnRestartMid = document.getElementById("btn-restart-mid");
 const btnSound = document.getElementById("btn-sound");
 const btnAutostart = document.getElementById("btn-autostart");
 const elPauseBadge = document.getElementById("pause-badge");
@@ -1836,6 +1838,7 @@ function togglePause() {
   syncPauseUI();
 }
 btnPause.addEventListener("click", togglePause);
+btnRestartMid.addEventListener("click", resetGame); // mid-game restart, same reset as Play Again
 
 const volSlider = document.getElementById("vol-slider");
 function syncSoundBtn() {

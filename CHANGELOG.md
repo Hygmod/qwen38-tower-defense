@@ -285,6 +285,15 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
   and calls syncAutostartBtn() (matching the syncSpeedBtn pattern), so a fresh
   game always starts with auto-start off. Playtest 6/6 still passes.
 
+- Added a mid-game Restart ghost button in the controls row (next to
+  Speed/Pause, `#btn-restart-mid`) that calls the same `resetGame()` as the
+  game-over Play Again, so a botched early build can be abandoned without
+  losing all 20 lives. Verified in Node against the real script with the
+  playtest boot harness: a mid-wave click resets gold/lives/wave/kills/economy
+  counters, clears enemies/projectiles/selection/hover/speed/auto-start, and
+  the fresh run is playable afterwards; also confirmed the help-card
+  open-freeze interaction (reset keeps the world frozen while the card is up,
+  by design). Playtest 6/6 still passes.
 - Added touch support: `touch-action: none` on the canvas stops drags from
   scrolling the page, and touchstart/touchmove/touchend/touchcancel now feed
   the same build-or-select path as click via a shared `tapCell()` (extracted
@@ -308,12 +317,16 @@ Each item is one bullet. Keep it short -- a sentence or two saying what is
 wrong or what is missing, and enough detail that the next developer can start
 without rediscovering it. No IDs, no status fields, no priorities.
 
-- No mid-game restart: the only reset is the game-over "Play Again", so a botched early build can't be abandoned until all 20 lives are gone. Add a Restart ghost button in the controls section that calls `resetGame()`.
 - No way to cancel the active build type: once a tower is picked every empty-cell click builds, and Esc only clears a selected placed tower, so you can't switch to inspect-only. Make clicking the already-selected `.tower-btn` (or re-pressing its hotkey) set `state.buildType = null`, and have the canvas click build only when buildType is set and otherwise just select.
 - `bestWave` (persisted in localStorage) is only surfaced on the game-over screen; the side panel never shows the all-time best during a run, so the player can't see the goal they're chasing. Show it in the panel as a small line under the Wave stat.
 - `spawnEnemy()` runs a fresh `findPath(towerGrid, ENTRY, EXIT)` BFS on every single spawn even though the cached `route` is already current (recomputeRoute() runs on every build and sell). Assign `e.route = route` instead, falling back to a recompute only if route is empty.
 - The lives stat never signals urgency: `#lives` looks identical at 20 and at 2. Add a red pulse/flash on the `#lives` element when `state.lives <= 3` (a class toggle in `syncHud()`), so a player looking away notices they're about to lose.
 - During a wave the side panel shows only a single "Enemies remaining" count, not what types are still on the field, so you can't tell if frost is needed for the remaining scouts. Extend the `#wave-info` line to also render the alive-enemies type breakdown, reusing the colored-dot markup from `nextWavePreviewHtml()`.
 - Selling a tower leaves its in-flight projectiles alive and they still credit the removed tower: `sellTower()` nulls the grid cell but not the projectiles carrying `p.src === t`, so those shots land and run `src.dealt += dmg` / `src.kills += 1` on a dead object. On sell, drop (or null the src of) any projectile whose `p.src === t`.
+- The new mid-game Restart button (`#btn-restart-mid`, listener wired straight
+  to `resetGame()`) is a one-misclick wipe of an in-progress run. Guard it:
+  either a `confirm()` (the playtest sandbox already stubs it) or an armed
+  two-step (first click arms a "Sure?" state, second confirms) before
+  `resetGame()` fires.
 
 When you finish an item, DELETE its bullet from here and add a line under Done.
