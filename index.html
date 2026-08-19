@@ -961,6 +961,10 @@ function updateEnemy(e, dt) {
   if (e.routeIndex >= e.route.length && e.route.length > 0) {
     // The route always ends at the exit, so walking it out means a leak.
     e.leaked = true;
+    // Guard: a simultaneous leaker earlier this frame may already have ended
+    // the game. Re-check so the sting plays and the overlay renders exactly
+    // once, and lives never dips below 0 mid-frame.
+    if (state.gameOver) return;
     state.lives -= 1;
     Sound.leak();
     if (state.lives <= 0) {

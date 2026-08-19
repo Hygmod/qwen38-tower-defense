@@ -204,6 +204,15 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
   clearing `state.hover`, which left a stale build preview (range circle,
   dashed re-route line, tower ghost) over the fresh maze after Play Again.
   Playtest 6/6 still passes.
+- Fixed simultaneous-leak double game-over: the leak branch in updateEnemy()
+  never re-checked state.gameOver, so two enemies reaching the exit in the same
+  frame each fired Sound.gameOver() and re-rendered the overlay, and could push
+  lives below 0 mid-frame; it now returns early when the game is already over,
+  so the sting/overlay fire exactly once and lives clamps to 0 (both leaks still
+  count when the second leaker is what exhausts lives). Verified in Node against
+  the real loop: 3 cases pass (simultaneous-leak sting-once, both-leaks-count,
+  lone-leaker regression), and the guard was confirmed to fail the first case
+  when removed. Playtest 6/6 still passes.
 
 
 ## Backlog
@@ -224,6 +233,5 @@ without rediscovering it. No IDs, no status fields, no priorities.
 - `spawnEnemy()` runs a fresh `findPath(towerGrid, ENTRY, EXIT)` BFS on every single spawn even though the cached `route` is already current (recomputeRoute() runs on every build and sell). Assign `e.route = route` instead, falling back to a recompute only if route is empty.
 - No touch support: canvas input is mouse-only (mousemove/mouseleave/click). Taps do fire click so building works, but there is no preview and the canvas has no `touch-action: none`, so dragging over it scrolls the page on mobile. Add `touch-action: none` and map tap/touchstart onto the same build-or-select path as click.
 - `bestWave` (persisted in localStorage) is only surfaced on the game-over screen; the side panel never shows the all-time best during a run, so the player can't see the goal they're chasing. Show it in the panel, e.g. a small line under the Wave stat.
-- Two enemies leaking in the same frame each call `showGameOver()`: the leak branch in `updateEnemy()` never re-checks `state.gameOver`, so the game-over sting plays and the overlay re-renders once per simultaneous leaker (lives can also dip below 0 within the frame before the clamp). Guard the branch so it fires only once.
 
 When you finish an item, DELETE its bullet from here and add a line under Done.
