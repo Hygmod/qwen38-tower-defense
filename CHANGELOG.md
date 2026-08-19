@@ -162,6 +162,17 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
   preview, so the two can never drift; ladder verified in Node for all
   three tower types (damage/range per level match the old inline formula
   exactly).
+- Added an "Auto-start" toggle (ghost button in the controls): when on, each
+  cleared wave schedules the next one AUTO_START_DELAY (4s) later, so the
+  player can keep building hands-free between waves. A new state.autoStart
+  flag arms it and state.autoStartTimer counts down in updateWave() *between*
+  waves only — the tick is dt-scaled and update() is skipped while paused, so
+  the delay freezes under Pause and shortens under 2x for free. The countdown
+  is shown live on the Start Wave button ("Start Wave · auto Ns"); a manual
+  start, toggling the feature off, or Play Again all cancel a running
+  countdown so it never surprises. Verified in Node against the real loop
+  (ON fires wave 2 with no click, OFF never auto-starts, manual start cancels
+  the timer), and the full playtest suite (6/6) still passes.
 
 ## Backlog
 
@@ -175,7 +186,6 @@ without rediscovering it. No IDs, no status fields, no priorities.
 - `routeKeys` is dead code: it is declared and rebuilt in `recomputeRoute()` but never read anywhere (the path tiles render straight from `route`). Delete it, or wire it to something that actually needs the cell-key set.
 - `resetGame()` (Play Again) resets the Pause state and button but not `state.speed` / the Speed button, so a 2x session carries the multiplier into the next game — inconsistent with the other control-state resets in the same function.
 - `resetGame()` doesn't clear `state.hover`, so the build preview (range circle, dashed re-route line, and tower ghost) lingers over the fresh maze until the mouse happens to move again.
-- Every wave needs a manual Start Wave click. An optional "auto-start next wave" toggle (short delay after a clear) is a common TD convenience that lets the player keep building between waves.
 - The layout isn't responsive: `.app` is a fixed ~950px flex row with no wrap/scroll and `body` centers it, so on a narrow window the flexbox-centering overflow bug clips the left edge of the canvas with no way to scroll back to it.
 - Audio is all-or-nothing (mute only). There's no master volume — a master GainNode plus a slider would let players dial the synthesized SFX down without losing it entirely.
 - `pickEnemyType()` makes waves 3–4 roughly 55% scouts (fast, fragile), a sharp speed spike versus the surrounding waves; worth reviewing the type mix for a gentler early ramp.

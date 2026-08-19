@@ -276,6 +276,7 @@
         <button class="ghost" id="btn-pause">Pause</button>
       </div>
       <button class="ghost" id="btn-sound">Sound: On</button>
+      <button class="ghost" id="btn-autostart">Auto-start: Off</button>
     </div>
 
     <div class="hint" style="margin-top:2px;">
@@ -296,6 +297,8 @@
       maze is rejected. Keys: <kbd>1</kbd> gun, <kbd>2</kbd> frost, <kbd>3</kbd> cannon,
       <kbd>U</kbd> upgrade, <kbd>S</kbd> sell, <kbd>Space</kbd> start wave,
       <kbd>P</kbd> pause, <kbd>M</kbd> sound.
+      <b>Auto-start</b> launches the next wave a few seconds after a clear —
+      toggle it to keep building hands-free.
     </div>
   </aside>
 </div>
@@ -378,6 +381,7 @@ const START_LIVES = 20;
 const SPAWN_STAGGER = 0.75; // seconds between enemy spawns in a wave
 const INTEREST_RATE = 0.05; // gold earned per wave clear: 5% of gold on hand
 const INTEREST_CAP = 30;    // ...banked at most 30g per wave (no snowball)
+const AUTO_START_DELAY = 4; // seconds between a cleared wave and its auto-start
 
 /* ============================== Sound ================================ */
 /* All audio is synthesized live with the Web Audio API — no files, no
@@ -511,7 +515,9 @@ const state = {
   selected: null,  // the tower object the player has selected
   hover: null,     // { c, r } cell under the mouse, or null
   kills: 0,
-  totalGoldEarned: 0
+  totalGoldEarned: 0,
+  autoStart: false,   // auto-launch the next wave a short delay after a clear
+  autoStartTimer: 0   // seconds left on the auto-start countdown
 };
 let bestWave = parseInt(localStorage.getItem("td-best-wave") || "0", 10);
 
@@ -1135,12 +1141,22 @@ function startWave() {
   nextWavePlan = planWave(state.wave + 1);
   state.toSpawn = waveQueue.length;
   state.spawnTimer = 0;
+  state.autoStartTimer = 0;
   toast("Wave " + state.wave + " incoming");
   Sound.waveStart();
   syncHud();
 }
 
 function updateWave(dt) {
+  // Auto-start countdown ticks between waves (never during one). Pausing
+  // stops update() entirely and 2x scales dt, so the delay freezes/speeds
+  // up with the rest of the sim for free.
+  if (!state.waveInProgress && state.autoStartTimer > 0) {
+    state.autoStartTimer = Math.max(0, state.autoStartTimer - dt);
+    if (state.autoStartTimer === 0) {
+      if (state.autoStart) { startWave(); return; }
+    }
+  }
   if (!state.waveInProgress) return;
   if (state.toSpawn > 0) {
     state.spawnTimer -= dt;
@@ -1160,6 +1176,7 @@ function updateWave(dt) {
     state.gold += bonus + interest;
     state.totalGoldEarned += bonus + interest;
     toast("Wave cleared! +" + bonus + " gold" + (interest > 0 ? " (+" + interest + "g interest)" : ""));
+    if (state.autoStart) state.autoStartTimer = AUTO_START_DELAY;
     Sound.waveClear();
     syncHud();
   }
@@ -1530,6 +1547,7 @@ const btnWave = document.getElementById("btn-wave");
 const btnSpeed = document.getElementById("btn-speed");
 const btnPause = document.getElementById("btn-pause");
 const btnSound = document.getElementById("btn-sound");
+const btnAutostart = document.getElementById("btn-autostart");
 const elPauseBadge = document.getElementById("pause-badge");
 const btnUpgrade = document.getElementById("btn-upgrade");
 const btnSell = document.getElementById("btn-sell");
@@ -1578,7 +1596,9 @@ function syncHud() {
     elNextWave.innerHTML = nwHtml;
   }
   btnWave.disabled = state.waveInProgress || state.gameOver;
-  btnWave.textContent = state.waveInProgress ? "Wave in progress" : "Start Wave";
+  if (state.waveInProgress) btnWave.textContent = "Wave in progress";
+  else if (state.autoStartTimer > 0) btnWave.textContent = "Start Wave · auto " + Math.ceil(state.autoStartTimer) + "s";
+  else btnWave.textContent = "Start Wave";
   btnPause.disabled = state.gameOver;
 
   towerBtns.forEach((btn) => {
@@ -1663,6 +1683,16 @@ function syncSoundBtn() {
 btnSound.addEventListener("click", () => {
   Sound.setMuted(!Sound.muted());
   syncSoundBtn();
+});
+
+function syncAutostartBtn() {
+  btnAutostart.textContent = "Auto-start: " + (state.autoStart ? "On" : "Off");
+  btnAutostart.classList.toggle("fast", state.autoStart);
+}
+btnAutostart.addEventListener("click", () => {
+  state.autoStart = !state.autoStart;
+  if (!state.autoStart) state.autoStartTimer = 0; // cancel any running countdown
+  syncAutostartBtn();
 });
 
 btnUpgrade.addEventListener("click", () => upgradeTower(state.selected));
@@ -1751,6 +1781,7 @@ function resetGame() {
   state.gameOver = false;
   state.paused = false;
   state.selected = null;
+  state.autoStartTimer = 0; // don't carry a live countdown into the next game
   state.kills = 0;
   state.totalGoldEarned = 0;
   waveQueue = [];
@@ -1796,6 +1827,7 @@ recomputeRoute();
 nextWavePlan = planWave(1);
 syncHud();
 syncSoundBtn();
+syncAutostartBtn();
 requestAnimationFrame(frame);
 
 })();
