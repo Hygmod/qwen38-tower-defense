@@ -2217,6 +2217,7 @@ function resetGame() {
   state.speed = 1; // don't carry the 2x multiplier into the next game
   state.selected = null;
   state.hover = null; // don't carry the build preview into the next game
+  state.buildType = "gun"; // don't carry the armed build type (or inspect mode) into the next game
   disarmSell(); // don't carry an armed sell into the next game
   state.autoStartTimer = 0; // don't carry a live countdown into the next game
   state.autoStart = false; // don't carry the auto-start flag into the next game

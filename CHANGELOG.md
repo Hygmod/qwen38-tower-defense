@@ -431,6 +431,17 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
   the playtest boot harness: 9 cases pass (two-T1 shots dropped, T2 shot and
   src-less shot survive, grid cell cleared, refund still granted). Playtest 6/6
   still passes.
+- Fixed Play Again (and mid-game Restart) carrying the armed build type into the
+  next game: resetGame() reset state.speed/autoStart/selected/hover but not
+  state.buildType, so dying with Cannon armed started the fresh run armed for
+  Cannon -- or in inspect mode (buildType = null, canvas clicks can never
+  build) if the type had been cancelled. resetGame() now sets
+  state.buildType = "gun" (the boot default) alongside the other resets;
+  syncHud() already re-syncs the buttons' .selected class from the field, so
+  no button-state change was needed. Verified in Node against the real script
+  with the playtest boot harness: cannon/frost armed and inspect mode all
+  reset to gun with button classes re-synced, and a fresh run after a mid-wave
+  restart clears its wave. Playtest 6/6 still passes.
 
 ## Backlog
 
@@ -441,7 +452,6 @@ Each item is one bullet. Keep it short -- a sentence or two saying what is
 wrong or what is missing, and enough detail that the next developer can start
 without rediscovering it. No IDs, no status fields, no priorities.
 
-- `resetGame()` resets `state.speed`, `state.autoStart`, `state.selected`, `state.hover` but not `state.buildType`, so Play Again (and the mid-game Restart) carries the armed build type into the fresh game — die with Cannon armed and the new run starts armed for Cannon, or in inspect mode if it had been cancelled. Add `state.buildType = "gun"` (the boot default) to `resetGame()` alongside the other resets, matching the speed/auto-start carry-over fixes.
 - The game keeps running while the tab is hidden or the window loses focus: `frame()` clamps `dt` to 0.1s so there is no fast-forward, but lives can still drain while the player is reading this page elsewhere. Add a `document` `visibilitychange` listener (and/or `window` `blur`) that sets `state.paused = true` and calls `syncPauseUI()` when `document.hidden` and a game is under way (`!state.gameOver`); do NOT auto-resume on focus return — the player resumes deliberately via P or the button, which avoids a surprise wave start.
 - The `Escape` hotkey clears `state.selected` but not `state.buildType`, so pressing Esc with a build type armed does nothing visible. Add `state.buildType = null` to the Escape branch of the `keydown` handler so Esc also cancels the armed build mode (matching the re-press-to-cancel behaviour).
 - Right-click on the canvas does nothing useful (the browser context menu opens) and there is no fast way to drop both an armed build type and a selected tower. Add a `contextmenu` listener on the canvas that `preventDefault()`s and sets `state.buildType = null` and `state.selected = null` (then `syncHud()`), so right-click is a universal "back to neutral" gesture; note it in the help card's Keys line.
