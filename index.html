@@ -2127,6 +2127,10 @@ let helpPausedByUs = false;
 function helpOpen() { return !elHelp.classList.contains("hidden"); }
 function showHelp() {
   elHelp.classList.remove("hidden");
+  // Drop the build preview so a stale range circle / dashed re-route line
+  // doesn't linger on the canvas slivers behind the card (the card covers the
+  // canvas without firing mouseleave, so the hover would otherwise stick).
+  state.hover = null;
   // Freeze only once a game is actually under way (wave > 0): the first-load
   // auto-show sits over an empty maze with nothing to pause, and the harness
   // boots as a first-time user and expects the loop running right after boot.

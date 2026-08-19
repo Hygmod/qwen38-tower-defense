@@ -529,6 +529,12 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
   path (beginFrame was the only budget reset, and it lived inside the
   paused-skipped update()) are both confirmed by inspection. Playtest 6/6
   still passes.
+- Fixed a stale build preview sitting under the help card: `showHelp()` now
+  clears `state.hover = null` (matching `resetGame()`), so the range circle +
+  dashed re-route line no longer linger on the canvas slivers behind the card
+  while the game is frozen — the card covers the canvas without firing
+  `mouseleave`, so the hover would otherwise stick until the next move. Pure
+  one-liner; playtest 6/6 still passes.
 
 ## Backlog
 
@@ -539,7 +545,6 @@ Each item is one bullet. Keep it short -- a sentence or two saying what is
 wrong or what is missing, and enough detail that the next developer can start
 without rediscovering it. No IDs, no status fields, no priorities.
 
-- A stale build preview can sit under the help card: `showHelp()` does not clear `state.hover`, and the card covers the canvas without firing `mouseleave`, so a hovering mouse leaves the range circle + dashed re-route line drawn on the visible canvas slivers behind the 540px card while the game is frozen. Clear `state.hover = null` in `showHelp()` (matching `resetGame()`, which already does this).
 - Right-click on the canvas does nothing useful (the browser context menu opens) and there is no fast way to drop both an armed build type and a selected tower. Add a `contextmenu` listener on the canvas that `preventDefault()`s and sets `state.buildType = null` and `state.selected = null` (then `syncHud()`), so right-click is a universal "back to neutral" gesture; note it in the help card's Keys line.
 - Hovering a placed tower draws nothing (the hover-preview block in `render()` is gated on `!towerGrid[r][c]`), so comparing a tower's coverage requires clicking it first and deselecting after. In the same hover block, when `state.hover` is over an occupied cell, draw that tower's range circle with `drawRangeCircle(t.x, t.y, t.range, "#06d6a0", 0.06)` so coverage is visible on hover before committing a selection.
 - The canvas cursor is always default: there is no affordance that a cell is buildable or a tower is clickable. In the `mousemove` handler set `canvas.style.cursor` to `"crosshair"` when `state.buildType` is armed, `"pointer"` when `state.hover` is over an occupied cell (`towerGrid[r][c]`), and `"default"` otherwise (and back to `"default"` in the `mouseleave` handler).
