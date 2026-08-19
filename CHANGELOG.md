@@ -319,6 +319,15 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
   inspect mode, inspect tap builds nothing/charges no gold/selects placed
   towers, build-mode tap regression, render safe with hover + null
   buildType). Playtest 6/6 still passes.
+- Added the all-time best wave to the side panel: a new `#best-wave` line
+  under the stats grid shows "Best wave: N" (— while none is set) during a
+  run, so the player sees the goal being chased instead of only at game
+  over. syncHud() renders it with the same diff-cache pattern as lastNwHtml
+  (new lastBestHtml) so the innerHTML parse only runs when the value
+  changes; while the current run is at or past the best (state.wave >=
+  bestWave) the number turns amber with a ★ so a record attempt is visible
+  at a glance. bestWave itself is untouched (still persisted in
+  showGameOver()). Playtest 6/6 still passes.
 
 ## Backlog
 
@@ -329,7 +338,6 @@ Each item is one bullet. Keep it short -- a sentence or two saying what is
 wrong or what is missing, and enough detail that the next developer can start
 without rediscovering it. No IDs, no status fields, no priorities.
 
-- `bestWave` (persisted in localStorage) is only surfaced on the game-over screen; the side panel never shows the all-time best during a run, so the player can't see the goal they're chasing. Show it in the panel as a small line under the Wave stat.
 - `spawnEnemy()` runs a fresh `findPath(towerGrid, ENTRY, EXIT)` BFS on every single spawn even though the cached `route` is already current (recomputeRoute() runs on every build and sell). Assign `e.route = route` instead, falling back to a recompute only if route is empty.
 - The lives stat never signals urgency: `#lives` looks identical at 20 and at 2. Add a red pulse/flash on the `#lives` element when `state.lives <= 3` (a class toggle in `syncHud()`), so a player looking away notices they're about to lose.
 - During a wave the side panel shows only a single "Enemies remaining" count, not what types are still on the field, so you can't tell if frost is needed for the remaining scouts. Extend the `#wave-info` line to also render the alive-enemies type breakdown, reusing the colored-dot markup from `nextWavePreviewHtml()`.

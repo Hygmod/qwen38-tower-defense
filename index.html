@@ -302,6 +302,7 @@
       <div class="stat"><span class="label">Lives</span><span class="value" id="lives">20</span></div>
       <div class="stat"><span class="label">Wave</span><span class="value" id="wave">0</span></div>
     </div>
+    <div id="best-wave" class="muted" style="text-align:center;font-size:12px;min-height:15px;"></div>
     <div id="wave-info" class="muted hidden" style="text-align:center;font-size:12px;">Enemies remaining: <b id="enemies-left">0</b></div>
     <div id="next-wave" class="muted" style="text-align:center;font-size:12px;min-height:15px;"></div>
 
@@ -1677,6 +1678,7 @@ const elWave = document.getElementById("wave");
 const elWaveInfo = document.getElementById("wave-info");
 const elEnemiesLeft = document.getElementById("enemies-left");
 const elNextWave = document.getElementById("next-wave");
+const elBestWave = document.getElementById("best-wave");
 const elToast = document.getElementById("toast");
 const elOverlay = document.getElementById("overlay");
 const elSelNone = document.getElementById("sel-none");
@@ -1700,6 +1702,7 @@ const modeBtns = Array.from(document.querySelectorAll(".mode-btn"));
 
 let toastTimer = 0;
 let lastNwHtml = "";
+let lastBestHtml = "";
 let lastSelStatsHtml = "";
 let lastSelCostsHtml = "";
 
@@ -1726,6 +1729,16 @@ function syncHud() {
   elGold.textContent = String(state.gold);
   elLives.textContent = String(state.lives);
   elWave.textContent = String(state.wave) + (state.waveInProgress ? " ▸" : "");
+  // All-time best (localStorage), visible during the run so the player can
+  // see the goal being chased. Amber + star while this run is at/past it.
+  const record = bestWave > 0 && state.wave >= bestWave;
+  const bestHtml = "Best wave: " + (bestWave > 0
+    ? '<b' + (record ? ' style="color:var(--amber)"' : "") + ">" + bestWave + (record ? " ★" : "") + "</b>"
+    : "—");
+  if (bestHtml !== lastBestHtml) {
+    lastBestHtml = bestHtml;
+    elBestWave.innerHTML = bestHtml;
+  }
 
   if (state.waveInProgress) {
     elWaveInfo.classList.remove("hidden");
