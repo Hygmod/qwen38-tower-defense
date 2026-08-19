@@ -471,6 +471,19 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
   pauses + UI sync, no auto-resume on re-show, hidden pause, visible no-op,
   game-over no-op, help-card pause-claim preserved through a blur, manual
   pause survives a blur). Playtest 6/6 still passes.
+- Added a leak warning: a new `leakImminent()` returns true while any live
+  enemy's remaining distance to the exit along its current route (exactly
+  `-enemyProgress(e)`: full cells ahead + the fraction of the current segment
+  still to walk) is within 3 cells, and the exit gate in `render()` then
+  pulses between amber and enemy-pink (#ef476f) at ~2Hz via a sine on
+  `performance.now()` with a small radius swell, so an in-progress leak reads
+  at a glance instead of arriving as a silent -1 life. Boxed-in enemies
+  (empty route, progress -Infinity) and dead/leaked enemies never trigger it;
+  the help card's Goal section notes the red pulse. Verified in Node against
+  the real boot: 15 cases pass (boundary at exactly 3, mid-segment 3.5 ->
+  false, 2.1 -> true, mixed far+near, boxed-in/dead/leaked no-trigger,
+  render no-throw, and end-to-end the warning fires before the first leak in
+  an undefended wave). Playtest 6/6 still passes.
 
 ## Backlog
 
@@ -481,7 +494,6 @@ Each item is one bullet. Keep it short -- a sentence or two saying what is
 wrong or what is missing, and enough detail that the next developer can start
 without rediscovering it. No IDs, no status fields, no priorities.
 
-- No leak warning: an enemy can march the last ~10 cells to the exit unremarked (the low-lives pulse only fires after lives are already gone). In `render()`, before the gate draws, test whether any live enemy's remaining route distance (`e.route.length - e.routeIndex` cells, plus the fraction of the current segment) is within 3 cells of the exit, and if so pulse the amber exit ring red (`#ef476f`) with a sine on `performance.now()`, so an in-progress leak is visible at a glance.
 - Towers never show what they are aiming at: `updateTower()` computes a target each frame but discards it, so with multiple modes (First/Strong/Close) the player cannot see why a tower shot a given enemy. Store the pick on the tower (`t.target = target`, cleared when none) and in `render()` draw a faint line from tower to `t.target` when the target is still alive and not leaked — one line per firing tower is cheap at this tower count.
 - Targeting mode is per-tower with no bulk control: the boss toast says "concentrate your fire", but pointing every tower at Strong or Close for a boss wave means clicking each tower and its mode row one at a time. Add a small "All" control to the `#sel-modes` row that sets `t.mode = mode` on every tower in `allTowers()` (plus `Sound.ui()` and the existing `.on` class sync on `modeBtns`), so one click re-points the whole field.
 - `Sound.beginFrame()` is called at the top of `update()`, which is skipped while paused, so the per-frame sound budget keeps its last value: after a dense frame that spent all 12 emissions, a build/upgrade/sell while paused plays no sound at all. Move the `beginFrame()` call from `update()` to `frame()` (before the paused check) so every rendered frame gets a fresh budget regardless of pause.

@@ -277,7 +277,7 @@
         <p class="help-sub">Stop the horde from crossing the maze. You start with <b>20 lives</b> and <b>200 gold</b>. The game pauses while this card is open — read at your own pace.</p>
         <div class="help-section">
           <h3>Goal</h3>
-          <p>Enemies spawn at the <b style="color:var(--mint)">green gate</b> (left) and walk the path to the <b style="color:var(--amber)">amber gate</b> (right). Each one that gets through costs a life — lose all 20 and it's over. Routes are pathfound live around your towers, so where you build bends the maze.</p>
+          <p>Enemies spawn at the <b style="color:var(--mint)">green gate</b> (left) and walk the path to the <b style="color:var(--amber)">amber gate</b> (right). Each one that gets through costs a life — lose all 20 and it's over. Routes are pathfound live around your towers, so where you build bends the maze. When an enemy gets within a few cells of the exit the gate <b style="color:#ef476f">pulses red</b> — that's your heads-up to react before it leaks.</p>
         </div>
         <div class="help-section">
           <h3>Building</h3>
@@ -1074,6 +1074,19 @@ function enemyProgress(e) {
   return (e.routeIndex + 1 - e.route.length) - Math.hypot(p.x - e.x, p.y - e.y) / CELL;
 }
 
+/* True while any live enemy is within 3 cells of the exit along its current
+   route — the on-field warning for an in-progress leak. Remaining distance is
+   exactly -enemyProgress(e) (full cells ahead + the fraction of the current
+   segment still to walk); boxed-in enemies (empty route) report +Infinity and
+   can never trigger it. */
+function leakImminent() {
+  for (const e of enemies) {
+    if (e.dead || e.leaked) continue;
+    if (-enemyProgress(e) <= 3) return true;
+  }
+  return false;
+}
+
 function damageEnemy(e, dmg, slows, src) {
   if (e.dead) return;
   e.hp -= dmg;
@@ -1458,15 +1471,25 @@ function render() {
     ctx.closePath();
     ctx.fill();
   }
-  // Exit gate: amber ring
+  // Exit gate: amber ring — pulses red while an enemy is about to leak
   {
     const cc = cellCenter(EXIT.c, EXIT.r);
-    ctx.strokeStyle = "#ffd166";
+    let color = "#ffd166";
+    let rad = 9;
+    if (leakImminent()) {
+      // ~2Hz sine pulse between amber and enemy-pink (plus a small radius
+      // swell) so an in-progress leak reads at a glance before it happens.
+      const s = 0.5 + 0.5 * Math.sin(performance.now() / 80);
+      const a = [255, 209, 102], b = [239, 71, 111];
+      color = "rgb(" + a.map((v, i) => Math.round(v + (b[i] - v) * s)).join(",") + ")";
+      rad = 9 + s * 1.5;
+    }
+    ctx.strokeStyle = color;
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.arc(cc.x, cc.y, 9, 0, Math.PI * 2);
+    ctx.arc(cc.x, cc.y, rad, 0, Math.PI * 2);
     ctx.stroke();
-    ctx.fillStyle = "#ffd166";
+    ctx.fillStyle = color;
     ctx.beginPath();
     ctx.arc(cc.x, cc.y, 3, 0, Math.PI * 2);
     ctx.fill();
