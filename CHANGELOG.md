@@ -328,6 +328,18 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
   bestWave) the number turns amber with a ★ so a record attempt is visible
   at a glance. bestWave itself is untouched (still persisted in
   showGameOver()). Playtest 6/6 still passes.
+- Cut the redundant per-spawn pathfinding: spawnEnemy() ran a fresh
+  findPath(towerGrid, ENTRY, EXIT) BFS for every single enemy a wave fired,
+  even though the cached `route` is already current (recomputeRoute() runs on
+  init, every build, and every sell, and is followed by repathAllEnemies()).
+  It now assigns `e.route = route` (sharing the array; safe because route
+  arrays are never mutated in place -- recomputeRoute reassigns the variable
+  and repathEnemy reassigns each enemy's own e.route, while updateEnemy only
+  reads the array and bumps the scalar e.routeIndex), falling back to a
+  recompute only if the cache is somehow empty. Verified in Node against the
+  real boot: a spawned enemy reuses the exact cached reference, a new spawn
+  after a build tracks the freshly reassigned route, and the empty-cache
+  fallback still yields a real entry->exit path. Playtest 6/6 still passes.
 
 ## Backlog
 
@@ -338,7 +350,6 @@ Each item is one bullet. Keep it short -- a sentence or two saying what is
 wrong or what is missing, and enough detail that the next developer can start
 without rediscovering it. No IDs, no status fields, no priorities.
 
-- `spawnEnemy()` runs a fresh `findPath(towerGrid, ENTRY, EXIT)` BFS on every single spawn even though the cached `route` is already current (recomputeRoute() runs on every build and sell). Assign `e.route = route` instead, falling back to a recompute only if route is empty.
 - The lives stat never signals urgency: `#lives` looks identical at 20 and at 2. Add a red pulse/flash on the `#lives` element when `state.lives <= 3` (a class toggle in `syncHud()`), so a player looking away notices they're about to lose.
 - During a wave the side panel shows only a single "Enemies remaining" count, not what types are still on the field, so you can't tell if frost is needed for the remaining scouts. Extend the `#wave-info` line to also render the alive-enemies type breakdown, reusing the colored-dot markup from `nextWavePreviewHtml()`.
 - Selling a tower leaves its in-flight projectiles alive and they still credit the removed tower: `sellTower()` nulls the grid cell but not the projectiles carrying `p.src === t`, so those shots land and run `src.dealt += dmg` / `src.kills += 1` on a dead object. On sell, drop (or null the src of) any projectile whose `p.src === t`.

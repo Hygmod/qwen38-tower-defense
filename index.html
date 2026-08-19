@@ -907,9 +907,13 @@ function spawnEnemy(forceType) {
     dead: false,
     leaked: false
   };
-  const p = findPath(towerGrid, ENTRY, EXIT);
-  e.route = p || [];
-  e.routeIndex = 1;
+  // The field route (ENTRY->EXIT) is already cached in `route` by
+  // recomputeRoute(), which runs on init, every build, and every sell, so a
+  // fresh BFS per spawn is redundant across the many enemies a wave fires.
+  // Reuse it; fall back to a recompute only if the cache is somehow empty
+  // (a sealed maze at spawn, which the sealing check should prevent).
+  e.route = route.length > 0 ? route : (findPath(towerGrid, ENTRY, EXIT) || []);
+  e.routeIndex = 1; // route[0] is the entry cell the enemy already stands in
   enemies.push(e);
   if (type === "boss") {
     Sound.boss();
