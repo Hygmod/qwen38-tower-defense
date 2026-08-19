@@ -442,6 +442,22 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
   with the playtest boot harness: cannon/frost armed and inspect mode all
   reset to gun with button classes re-synced, and a fresh run after a mid-wave
   restart clears its wave. Playtest 6/6 still passes.
+- Auto-pause when the tab is hidden or the window loses focus: `frame()`
+  clamped dt to 0.1s (no fast-forward) but the sim still ticked while the
+  player read elsewhere, so lives could drain quietly. A new `pauseIfAway()`
+  (gated on `!state.gameOver && !state.paused`) sets `state.paused = true` and
+  calls `syncPauseUI()`; wired to `document` `visibilitychange` (reads
+  `document.hidden`) and `document` `blur` (fires on window focus loss). Both
+  are on `document` rather than `window` because the playtest stub only gives
+  `document` a working `addEventListener` and `document.blur` is a standard
+  window-focus-loss signal in real browsers too. Deliberately NO auto-resume
+  on focus return: the player resumes via P or the Resume button, which also
+  avoids a surprise auto-start wave the moment focus comes back. While paused
+  `update()` is skipped, so the auto-start countdown freezes too. Verified in
+  Node against the real script with captured listeners: 17 cases pass (blur
+  pauses + UI sync, no auto-resume on re-show, hidden pause, visible no-op,
+  game-over no-op, help-card pause-claim preserved through a blur, manual
+  pause survives a blur). Playtest 6/6 still passes.
 
 ## Backlog
 
@@ -452,7 +468,6 @@ Each item is one bullet. Keep it short -- a sentence or two saying what is
 wrong or what is missing, and enough detail that the next developer can start
 without rediscovering it. No IDs, no status fields, no priorities.
 
-- The game keeps running while the tab is hidden or the window loses focus: `frame()` clamps `dt` to 0.1s so there is no fast-forward, but lives can still drain while the player is reading this page elsewhere. Add a `document` `visibilitychange` listener (and/or `window` `blur`) that sets `state.paused = true` and calls `syncPauseUI()` when `document.hidden` and a game is under way (`!state.gameOver`); do NOT auto-resume on focus return — the player resumes deliberately via P or the button, which avoids a surprise wave start.
 - The `Escape` hotkey clears `state.selected` but not `state.buildType`, so pressing Esc with a build type armed does nothing visible. Add `state.buildType = null` to the Escape branch of the `keydown` handler so Esc also cancels the armed build mode (matching the re-press-to-cancel behaviour).
 - Right-click on the canvas does nothing useful (the browser context menu opens) and there is no fast way to drop both an armed build type and a selected tower. Add a `contextmenu` listener on the canvas that `preventDefault()`s and sets `state.buildType = null` and `state.selected = null` (then `syncHud()`), so right-click is a universal "back to neutral" gesture; note it in the help card's Keys line.
 - Hovering a placed tower draws nothing (the hover-preview block in `render()` is gated on `!towerGrid[r][c]`), so comparing a tower's coverage requires clicking it first and deselecting after. In the same hover block, when `state.hover` is over an occupied cell, draw that tower's range circle with `drawRangeCircle(t.x, t.y, t.range, "#06d6a0", 0.06)` so coverage is visible on hover before committing a selection.

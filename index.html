@@ -2114,6 +2114,22 @@ document.addEventListener("keydown", (ev) => {
   }
 });
 
+/* Auto-pause when the tab is hidden or the window loses focus: frame()
+   clamps dt so there is no fast-forward, but the sim still ticks while the
+   player reads elsewhere, so lives can drain quietly. Pause on the way out;
+   do NOT auto-resume on focus return — the player resumes deliberately via P
+   or the Resume button, which also avoids a surprise wave start (auto-start
+   would otherwise fire the moment focus comes back). document.blur fires on
+   window focus loss; visibilitychange covers true tab-hide. */
+function pauseIfAway(away) {
+  if (away && !state.gameOver && !state.paused) {
+    state.paused = true;
+    syncPauseUI();
+  }
+}
+document.addEventListener("visibilitychange", () => pauseIfAway(document.hidden));
+document.addEventListener("blur", () => pauseIfAway(true));
+
 /* ============================== Canvas input ========================== */
 
 function eventCell(ev) {
