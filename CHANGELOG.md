@@ -346,6 +346,16 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
   -> 1, 0.8s infinite), so a player looking away notices they're about to
   lose. Pure CSS + one classList.toggle; the playtest stub's toggle(force)
   already supports the second arg. Playtest 6/6 still passes.
+- Added a live on-field enemy-type breakdown to the `#wave-info` line so a
+  player can tell at a glance whether the remaining horde still has the fast
+  scouts that call for frost. The dot markup moved out of `nextWavePreviewHtml()`
+  into two shared helpers (`countTypes()` tallies a list of type strings,
+  `typeDotsHtml()` renders the colored dots), and both the Next-row preview and
+  the new `aliveTypeBreakdownHtml()` (counts each `e.type` in `enemies`, alive
+  only) go through them, so the two dot renderings can't drift. `syncHud()`
+  writes the breakdown into a new `#alive-breakdown` span after the "Enemies
+  remaining" total, diff-cached in `lastAbHtml` like the other HTML lines, and
+  resets it when the wave ends. Playtest 6/6 still passes.
 
 ## Backlog
 
@@ -356,7 +366,6 @@ Each item is one bullet. Keep it short -- a sentence or two saying what is
 wrong or what is missing, and enough detail that the next developer can start
 without rediscovering it. No IDs, no status fields, no priorities.
 
-- During a wave the panel shows only a single "Enemies remaining" count, not what types are still on the field, so you can't tell if frost is needed for the remaining scouts. Extend the `#wave-info` line in `syncHud()` to also render the alive-enemies type breakdown (a count of each `e.type` in `enemies`), reusing the colored-dot markup from `nextWavePreviewHtml()`.
 - The build buttons give no at-a-glance affordability signal: a broke player only finds out after a failed click and toast. In `syncHud()`, dim/disable each `.tower-btn` (and its `.tb-cost`) when `state.gold < TOWER_TYPES[btn.dataset.type].cost`, reusing the `affordable` check the hover preview already computes.
 - In `update()`, `enemies = enemies.filter(...)` runs before `updateProjectiles()`, so enemies killed by a projectile linger in the array for a full frame: the "Enemies remaining" count (`enemies.length + toSpawn` in `syncHud()`) and the wave-clear check (`state.toSpawn === 0 && enemies.length === 0` in `updateWave()`) both read the stale count for one frame, and the delay becomes visible if you pause on that frame. Move the filter to the end of `update()`, after `updateProjectiles()`.
 - The per-tower "Value" (damage per gold) stat that drives the upgrade-vs-sell decision requires selecting each tower one at a time to compare. Add a compact "Towers" list to the side panel rendering each placed tower's type + level + Value sorted by Value descending (clicking one selects it), reusing the existing per-tower `dealt`/`invested` fields and `syncHud`'s diff-cache pattern.

@@ -311,7 +311,7 @@
       <div class="stat"><span class="label">Wave</span><span class="value" id="wave">0</span></div>
     </div>
     <div id="best-wave" class="muted" style="text-align:center;font-size:12px;min-height:15px;"></div>
-    <div id="wave-info" class="muted hidden" style="text-align:center;font-size:12px;">Enemies remaining: <b id="enemies-left">0</b></div>
+    <div id="wave-info" class="muted hidden" style="text-align:center;font-size:12px;">Enemies remaining: <b id="enemies-left">0</b><span id="alive-breakdown"></span></div>
     <div id="next-wave" class="muted" style="text-align:center;font-size:12px;min-height:15px;"></div>
 
     <div class="section">
@@ -1689,6 +1689,7 @@ const elLives = document.getElementById("lives");
 const elWave = document.getElementById("wave");
 const elWaveInfo = document.getElementById("wave-info");
 const elEnemiesLeft = document.getElementById("enemies-left");
+const elAliveBreakdown = document.getElementById("alive-breakdown");
 const elNextWave = document.getElementById("next-wave");
 const elBestWave = document.getElementById("best-wave");
 const elToast = document.getElementById("toast");
@@ -1715,19 +1716,35 @@ const modeBtns = Array.from(document.querySelectorAll(".mode-btn"));
 let toastTimer = 0;
 let lastNwHtml = "";
 let lastBestHtml = "";
+let lastAbHtml = "";
 let lastSelStatsHtml = "";
 let lastSelCostsHtml = "";
 
-/* Colored-dot breakdown of the coming wave's pre-rolled lineup. */
-function nextWavePreviewHtml() {
+/* Count a list of enemy-type strings into a per-type tally. */
+function countTypes(list) {
   const counts = { normal: 0, scout: 0, brute: 0, boss: 0 };
-  for (const t of nextWavePlan) counts[t]++;
+  for (const t of list) counts[t]++;
+  return counts;
+}
+/* Colored-dot rendering of a per-type tally. Shared by the next-wave preview
+   and the live on-field breakdown so the dot colors/labels can never drift. */
+function typeDotsHtml(counts) {
   const parts = [];
   if (counts.normal) parts.push('<span style="color:#ef476f;">●</span> ' + counts.normal);
   if (counts.scout) parts.push('<span style="color:#f78fb3;">●</span> ' + counts.scout);
   if (counts.brute) parts.push('<span style="color:#c9184a;">●</span> ' + counts.brute);
   if (counts.boss) parts.push('<span style="color:#9d4edd;">●</span> <b>Boss</b>');
   return parts.join("  ");
+}
+/* Colored-dot breakdown of the coming wave's pre-rolled lineup. */
+function nextWavePreviewHtml() {
+  return typeDotsHtml(countTypes(nextWavePlan));
+}
+/* Colored-dot breakdown of the enemies still on the field (alive only), so
+   the player can see at a glance whether the remaining horde includes the fast
+   scouts that call for frost. */
+function aliveTypeBreakdownHtml() {
+  return typeDotsHtml(countTypes(enemies.map((e) => e.type)));
 }
 function toast(msg, bad) {
   elToast.textContent = msg;
@@ -1756,8 +1773,16 @@ function syncHud() {
   if (state.waveInProgress) {
     elWaveInfo.classList.remove("hidden");
     elEnemiesLeft.textContent = String(enemies.length + state.toSpawn);
+    // Live on-field type breakdown (alive only), reusing the Next-row dots, so
+    // the player can tell at a glance whether frost is still needed for scouts.
+    const abHtml = aliveTypeBreakdownHtml();
+    if (abHtml !== lastAbHtml) {
+      lastAbHtml = abHtml;
+      elAliveBreakdown.innerHTML = abHtml ? " &nbsp;·&nbsp; " + abHtml : "";
+    }
   } else {
     elWaveInfo.classList.add("hidden");
+    if (lastAbHtml !== "") { lastAbHtml = ""; elAliveBreakdown.innerHTML = ""; }
   }
   const bank = waveInterest(state.gold);
   const nwHtml = state.gameOver ? "" : "Next " + (state.wave + 1) + ": " + nextWavePreviewHtml() +
