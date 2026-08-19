@@ -181,6 +181,19 @@
   .swatch.cannon { background: #ff8c42; box-shadow: 0 0 10px rgba(255, 140, 66, 0.7); }
   .tb-name { font-weight: 700; flex: 1; }
   .tb-cost { color: var(--amber); font-size: 12px; font-weight: 600; }
+  .tower-list { display: flex; flex-direction: column; gap: 4px; max-height: 148px; overflow-y: auto; }
+  .tower-row {
+    display: flex; align-items: center; gap: 7px; width: 100%;
+    background: #20202c; color: var(--text);
+    border: 1px solid var(--line); border-radius: 7px;
+    padding: 5px 8px; cursor: pointer;
+    font: inherit; font-size: 12px; text-align: left;
+    transition: border-color 0.12s ease, background 0.12s ease;
+  }
+  .tower-row:hover { background: #242433; border-color: #34344a; }
+  .tower-row.selected { border-color: var(--mint); box-shadow: 0 0 0 1px var(--mint) inset; }
+  .tower-row .tr-name { font-weight: 700; flex: 1; }
+  .tower-row .tr-val { color: var(--amber); font-weight: 600; font-variant-numeric: tabular-nums; }
   button.primary {
     background: linear-gradient(180deg, #0aa37c 0%, var(--mint) 100%);
     color: #04241b;
@@ -335,6 +348,12 @@
         <span class="tb-cost">100g</span>
       </button>
       <div class="hint">Gun: fast, single-target. Frost: chills for 2s (half speed). Cannon: slow, area blast vs swarms. Click a cell to build, click a tower to inspect it.</div>
+    </div>
+
+    <div class="section">
+      <h2>Towers</h2>
+      <div id="tower-list" class="tower-list"></div>
+      <div class="hint">Sorted by Value (damage per gold invested) — click a tower to select it.</div>
     </div>
 
     <div class="section">
@@ -1700,6 +1719,7 @@ const elNextWave = document.getElementById("next-wave");
 const elBestWave = document.getElementById("best-wave");
 const elToast = document.getElementById("toast");
 const elOverlay = document.getElementById("overlay");
+const elTowerList = document.getElementById("tower-list");
 const elSelNone = document.getElementById("sel-none");
 const elSelBox = document.getElementById("sel-box");
 const elSelTitle = document.getElementById("sel-title");
@@ -1725,6 +1745,48 @@ let lastBestHtml = "";
 let lastAbHtml = "";
 let lastSelStatsHtml = "";
 let lastSelCostsHtml = "";
+let lastTowersHtml = "";
+
+/* Damage dealt per gold invested — the upgrade-vs-sell ratio shown in the
+   Selected Tower panel and the Towers list. Shared so the two can't drift. */
+function towerValue(t) {
+  return t.invested > 0 ? (t.dealt || 0) / t.invested : 0;
+}
+/* Every placed tower, row-major. Towers live only in towerGrid, so the grid
+   is the single source of truth for the list. */
+function allTowers() {
+  const list = [];
+  for (let r = 0; r < ROWS; r++)
+    for (let c = 0; c < COLS; c++)
+      if (towerGrid[r][c]) list.push(towerGrid[r][c]);
+  return list;
+}
+/* The side-panel Towers list: one row per placed tower, sorted by Value
+   descending (stable, so ties keep row-major order), with the selected
+   tower's row marked. Rebuilt as a string and diff-cached in syncHud like
+   the other innerHTML lines. Rows are keyed by cell (r/c) — stable while a
+   tower lives — and the click handler resolves the key back to the object. */
+function towersListHtml() {
+  const towers = allTowers().slice().sort((a, b) => towerValue(b) - towerValue(a));
+  if (towers.length === 0) return '<span class="muted">No towers yet.</span>';
+  return towers.map((t) => {
+    const type = TOWER_TYPES[t.type];
+    const sel = state.selected === t;
+    return '<button class="tower-row' + (sel ? ' selected' : '') + '" data-r="' + t.r + '" data-c="' + t.c + '">' +
+      '<span style="width:9px;height:9px;border-radius:3px;background:' + type.color + ';flex:none;"></span>' +
+      '<span class="tr-name">' + type.name + ' · Lv ' + t.level + '</span>' +
+      '<span class="tr-val">' + towerValue(t).toFixed(1) + 'x</span>' +
+      '</button>';
+  }).join("");
+}
+
+elTowerList.addEventListener("click", (ev) => {
+  const btn = ev.target.closest(".tower-row");
+  if (!btn) return;
+  const r = parseInt(btn.dataset.r, 10), c = parseInt(btn.dataset.c, 10);
+  const t = towerGrid[r] && towerGrid[r][c];
+  if (t) { state.selected = t; syncHud(); }
+});
 
 /* Count a list of enemy-type strings into a per-type tally. */
 function countTypes(list) {
@@ -1811,6 +1873,17 @@ function syncHud() {
     btn.disabled = state.gold < TOWER_TYPES[btn.dataset.type].cost;
   });
 
+  // Towers list: one row per placed tower, sorted by Value descending. Lives
+  // ABOVE the no-selection early return below so it stays live when nothing
+  // is selected (the list is how you pick what to select). Rewritten only
+  // when the displayed string changes (a Value crossing a 0.1 boundary, a
+  // reorder, a build/sell, or a selection change).
+  const tlHtml = towersListHtml();
+  if (tlHtml !== lastTowersHtml) {
+    lastTowersHtml = tlHtml;
+    elTowerList.innerHTML = tlHtml;
+  }
+
   const t = state.selected;
   if (!t) {
     elSelNone.classList.remove("hidden");
@@ -1830,7 +1903,7 @@ function syncHud() {
     "Rate <b>" + (1 / t.fireCooldown).toFixed(1) + "/s</b> &nbsp; " +
     (type.slows ? "Chills enemies" : "Single-target") + "<br>" +
     "Dealt <b>" + Math.round(t.dealt) + "</b> &nbsp; Kills <b>" + (t.kills || 0) +
-    " &nbsp; Value <b>" + (t.invested > 0 ? ((t.dealt || 0) / t.invested).toFixed(1) : "0.0") + "x</b>";
+    " &nbsp; Value <b>" + towerValue(t).toFixed(1) + "x</b>";
   if (statsHtml !== lastSelStatsHtml) {
     lastSelStatsHtml = statsHtml;
     elSelStats.innerHTML = statsHtml;

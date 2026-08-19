@@ -383,6 +383,22 @@ What has already been built. Newest at the bottom. Do not repeat any of this.
   over 5 waves with 76 projectile-kill frames, 0 stale-enemy violations at
   frame end with the fix and exactly 76 (one per kill frame) with the old
   order. Playtest 6/6 still passes.
+- Added a "Towers" list section to the side panel (above Selected Tower): one
+  row per placed tower — type dot + name + level + Value — sorted by Value
+  descending (stable, so ties keep row-major grid order), with the selected
+  tower's row highlighted. Clicking a row selects that tower. New `allTowers()`
+  scans towerGrid (the single source of truth; there is no separate tower
+  array), `towerValue()` now holds the shared dealt/invested math used by both
+  the list and the Selected Tower panel's stats line, and `towersListHtml()`
+  builds the rows keyed by stable cell (data-r/data-c) which the delegated
+  click handler resolves back to the tower object. Rendered in `syncHud()`
+  ABOVE the no-selection early return (so it stays live when nothing is
+  selected — it is how you pick what to select), diff-cached in lastTowersHtml
+  like the other innerHTML lines; rows are rewritten only when a Value crosses
+  a 0.1 boundary, order changes, a tower is built/sold, or selection moves.
+  max-height 148px scrolls. Verified in Node against the real script: empty
+  state, sort order, selection mark on/off, syncHud write + diff-cache no-op,
+  sell-removes-row, and toFixed(1) display all pass. Playtest 6/6 still passes.
 
 ## Backlog
 
@@ -393,7 +409,6 @@ Each item is one bullet. Keep it short -- a sentence or two saying what is
 wrong or what is missing, and enough detail that the next developer can start
 without rediscovering it. No IDs, no status fields, no priorities.
 
-- The per-tower "Value" (damage per gold) stat that drives the upgrade-vs-sell decision requires selecting each tower one at a time to compare. Add a compact "Towers" list to the side panel rendering each placed tower's type + level + Value sorted by Value descending (clicking one selects it), reusing the existing per-tower `dealt`/`invested` fields and `syncHud`'s diff-cache pattern.
 - The new mid-game Restart button (`#btn-restart-mid`, wired straight to `resetGame()`) is a one-misclick wipe of an in-progress run. Guard it with a `confirm()` (the playtest sandbox already stubs it) or an armed two-step (first click arms a "Sure?" state, second confirms) before `resetGame()` fires.
 - Selling a tower is a single irreversible click that refunds and removes an invested tower with no guard. Add the same class of guard as the mid-game Restart: an armed two-step on `#btn-sell` (or a short unsell grace) so a misclick doesn't lose a tower.
 - A tower's targeting mode (First/Last/Strong/Close) is only shown in the side panel, so with several towers placed you can't tell which are set to Strong (the brute/boss counterplay) without selecting each one. In `drawTower()`, render a small 1-2 letter badge (F/L/S/C) for `t.mode` under the existing level pips.
