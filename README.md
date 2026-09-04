@@ -4,7 +4,7 @@ A dependency-free tower-defense game built and then improved by Qwen3.8-27B runn
 
 This repository is frozen at the end of a 30-for-30 unattended run: 30 build sessions, 30 accepted commits, no reverts, no hangs, and no verification regressions. The game here is the artifact from that endpoint, not a cleaned-up or newer private version.
 
-The hosted links will be added after the first production deployment. The [full story](docs/story.md) covers the one-shot build, the improvement loop, what failed, and what made the loop steerable.
+[Play the game](https://qwen38-tower-defense.vercel.app/) or [read the full story](https://qwen38-tower-defense.vercel.app/story/). The story covers the one-shot build, the improvement loop, what failed, and what made the loop steerable.
 
 ## Result
 

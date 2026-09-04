@@ -34,13 +34,13 @@
 <body>
   <a class="skip" href="#story">Skip to story</a>
   <header>
-      <nav aria-label="Primary"><a href="/">Play the game</a><span>Source link added after release</span></nav>
+      <nav aria-label="Primary"><a href="/">Play the game</a><a href="https://github.com/Hygmod/qwen38-tower-defense">View the source</a></nav>
     <div class="eyebrow">Qwen3.8-27B · local agent experiment</div>
     <h1>From One Prompt to an Unattended Backlog</h1>
     <p class="dek">How a local model went from failing to write a file to taking the top item from a backlog 30 times in a row.</p>
   </header>
   <main id="story"><article>
-<p>I have been experimenting with Qwen3.8-27B, a local model that just barely fits on my 24 GB MacBook Pro. I started with a simple question: can it actually code?</p>
+<p>I've been experimenting with Qwen3.8-27B, a local model that just barely fits on my 24 GB MacBook Pro. I started with a simple question: can it actually code?</p>
 <p>That turned into a much more interesting question. If it can build something once, what does it take to let it keep working without me sitting there?</p>
 <p>The game published with this write-up is frozen at the end of the experiment&#39;s 30-for-30 run. It is not the latest version from the private lab, and I have not cleaned up or improved the game since the model produced it. I wanted the thing people can play to match the result I am describing.</p>
 <h2 id="the-first-prompt">The first prompt</h2>
@@ -60,7 +60,7 @@
 <li>A successful manual play-test</li>
 </ul>
 <p>It also did something I had not requested. It wrote an 11.7 KB Node test harness with 60 assertions covering routing, combat, economy, and the frame loop.</p>
-<p>That was impressive, but I could not treat it as independent evidence. When tests failed, the model changed the harness rather than the game. Its diagnoses were plausible, and some were correct, but a model that writes both the implementation and the tests can share the same misunderstanding on both sides. The manual play-test was still the strongest evidence that the game actually worked.</p>
+<p>That was impressive, but I couldn't treat it as independent evidence. When tests failed, the model changed the harness rather than the game. Its diagnoses were plausible, and some were correct, but a model that writes both the implementation and the tests can share the same misunderstanding on both sides. The manual play-test was still the strongest evidence that the game actually worked.</p>
 <h2 id="letting-it-keep-working">Letting it keep working</h2>
 <p>The next step was to stop treating this as a one-shot generation problem.</p>
 <p>I built a loop that launched a fresh agent session for each iteration. The session inspected the current game, chose one improvement, implemented it, and ran the verification gate. If the gate passed, the loop committed the change. If it failed, the loop reverted everything and started the next session from the last known-good state.</p>
@@ -133,7 +133,8 @@
 <p>That is the part I found most interesting. Useful autonomy did not come from giving the model fewer constraints. It came from making the work, the checks, and the next decision more explicit.</p>
 <h2 id="play-it">Play it</h2>
 <p>The playable version is the exact game state at the end of the 30-for-30 run. Later private experiments continued changing it, but those changes are deliberately not included here.</p>
-<p>The playable game and source links will be added after the first production deployment.</p>
+<p><a href="/">Play the game</a></p>
+<p>The source is available under the MIT license in the <a href="https://github.com/Hygmod/qwen38-tower-defense">GitHub repository</a>.</p>
   </article></main>
   <footer>Written by Josh Anton. The game and its curated history are available under the MIT license.</footer>
 </body>

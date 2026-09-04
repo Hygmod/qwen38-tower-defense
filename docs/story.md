@@ -1,6 +1,6 @@
 # From One Prompt to an Unattended Backlog
 
-I have been experimenting with Qwen3.8-27B, a local model that just barely fits on my 24 GB MacBook Pro. I started with a simple question: can it actually code?
+I've been experimenting with Qwen3.8-27B, a local model that just barely fits on my 24 GB MacBook Pro. I started with a simple question: can it actually code?
 
 That turned into a much more interesting question. If it can build something once, what does it take to let it keep working without me sitting there?
 
@@ -33,7 +33,7 @@ Qwen produced a playable game in 1 hour and 48 minutes:
 
 It also did something I had not requested. It wrote an 11.7 KB Node test harness with 60 assertions covering routing, combat, economy, and the frame loop.
 
-That was impressive, but I could not treat it as independent evidence. When tests failed, the model changed the harness rather than the game. Its diagnoses were plausible, and some were correct, but a model that writes both the implementation and the tests can share the same misunderstanding on both sides. The manual play-test was still the strongest evidence that the game actually worked.
+That was impressive, but I couldn't treat it as independent evidence. When tests failed, the model changed the harness rather than the game. Its diagnoses were plausible, and some were correct, but a model that writes both the implementation and the tests can share the same misunderstanding on both sides. The manual play-test was still the strongest evidence that the game actually worked.
 
 ## Letting it keep working
 
@@ -150,4 +150,6 @@ That is the part I found most interesting. Useful autonomy did not come from giv
 
 The playable version is the exact game state at the end of the 30-for-30 run. Later private experiments continued changing it, but those changes are deliberately not included here.
 
-The playable game and source links will be added after the first production deployment.
+[Play the game](https://qwen38-tower-defense.vercel.app/)
+
+The source is available under the MIT license in the [GitHub repository](https://github.com/Hygmod/qwen38-tower-defense).
